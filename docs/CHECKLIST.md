@@ -33,7 +33,8 @@ if a command produced the result, not because something "should" work.
 - [x] Fleet dashboard and asset detail pages (Server Components, direct Prisma, keyset pagination)
 - [x] `tailwind-merge` and `clsx` declared explicitly
 - [x] Database verification script (`scripts/verify-db.mjs`)
-- [ ] Vitest configured and a `test` script added
+- [x] Vitest configured and a `test` script added
+- [x] Unit tests for display helpers and the Kelvin/Celsius conversion
 - [ ] Unit tests for guardrail thresholds and CSV parsing
 - [ ] CI workflow: typecheck, test, lint, build
 - [ ] CI migration-drift gate (blocked on the `searchVector` false positive — see below)
@@ -126,8 +127,24 @@ if a command produced the result, not because something "should" work.
 
 ## Running throughout
 
-- [x] Migration safety: hand-author SQL, never `prisma migrate dev`
-- [x] Dataset provenance and licence recorded
+- [x] Migration safety: hand-authored SQL, never `prisma migrate dev`
+- [x] Dataset provenance and licence recorded, and dataset bytes pinned so a
+      clone reproduces the documented SHA-256
 - [x] Typecheck clean
+- [x] Lint clean across the whole project
+- [x] Unit tests run and passing
 - [x] Production build passing
 - [ ] Tests in CI before the next phase lands
+
+## Known deviations
+
+- `react-hooks/set-state-in-effect` is disabled for `components/ui/**` and
+  `hooks/**`. Those files are shadcn-generated; two of them synchronise
+  external state with `useEffect` + `setState`. Rewriting them locally would
+  be undone by the next `shadcn add`, so the rule is scoped off for the
+  vendored paths. `app/` and `features/` are still held to it.
+- `@types/node` is on 22 rather than 20, because vitest 5 requires
+  `^22 || >=24`. This matches the Node 22 runtime.
+- Dataset integrity depends on `.gitattributes` marking `data/raw/*.csv` as
+  `-text`. Without it git rewrote CRLF to LF and the committed blob no longer
+  matched the checksum in `data/README.md`.
