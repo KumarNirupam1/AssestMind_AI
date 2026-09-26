@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
@@ -89,9 +90,9 @@ export default async function AssetDetailPage({
             {formatInteger(asset._count.documents)} documents indexed
           </p>
         </div>
-        <a href="/" className="text-sm underline-offset-4 hover:underline">
+        <Link href="/" className="text-sm underline-offset-4 hover:underline">
           ← Fleet dashboard
-        </a>
+        </Link>
       </header>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

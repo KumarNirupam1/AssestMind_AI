@@ -6,10 +6,10 @@ import {
   FactoryIcon,
   GaugeIcon,
   MoonIcon,
-  PanelLeftIcon,
   SunIcon,
   WrenchIcon,
 } from "lucide-react";
+import Link from "next/link";
 import { useTheme } from "next-themes";
 import * as React from "react";
 
@@ -50,25 +50,32 @@ function BrandMark({ className }: { className?: string }) {
   );
 }
 
+/**
+ * Theme toggle driven purely by CSS.
+ *
+ * Reading `resolvedTheme` during render is what forces the usual
+ * `useEffect` + `setMounted` dance, and that in turn causes a hydration
+ * mismatch and a cascading render. Both icons and both labels are rendered
+ * and the `.dark` class decides which is visible, so there is no state to
+ * synchronise. `resolvedTheme` is only read inside the click handler, which
+ * never runs on the server.
+ */
 function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const isDark = mounted && resolvedTheme === "dark";
 
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
-        tooltip={isDark ? "Switch to light mode" : "Switch to dark mode"}
-        onClick={() => setTheme(isDark ? "light" : "dark")}
+        tooltip="Toggle theme"
+        onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
       >
-        {isDark ? <SunIcon /> : <MoonIcon />}
-        <span className="group-data-[collapsible=icon]:hidden">
-          {isDark ? "Light mode" : "Dark mode"}
+        <MoonIcon className="dark:hidden" />
+        <SunIcon className="hidden dark:block" />
+        <span className="group-data-[collapsible=icon]:hidden dark:hidden">
+          Dark mode
+        </span>
+        <span className="hidden group-data-[collapsible=icon]:hidden dark:inline">
+          Light mode
         </span>
       </SidebarMenuButton>
     </SidebarMenuItem>
@@ -91,7 +98,7 @@ export function AppSidebar({ assets = [] }: { assets?: NavAsset[] }) {
               <SidebarMenuButton
                 size="lg"
                 className="font-semibold tracking-tight"
-                render={<a href="/" />}
+                render={<Link href="/" />}
                 tooltip="AssetMind AI"
               >
                 <BrandMark />
@@ -109,7 +116,7 @@ export function AppSidebar({ assets = [] }: { assets?: NavAsset[] }) {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton tooltip="Fleet dashboard" render={<a href="/" />}>
+                <SidebarMenuButton tooltip="Fleet dashboard" render={<Link href="/" />}>
                   <GaugeIcon />
                   <span className="group-data-[collapsible=icon]:hidden">
                     Fleet dashboard
@@ -135,7 +142,7 @@ export function AppSidebar({ assets = [] }: { assets?: NavAsset[] }) {
                 <SidebarMenuItem key={asset.id}>
                   <SidebarMenuButton
                     tooltip={`${asset.name} — ${asset.faultCount} faults`}
-                    render={<a href={`/assets/${asset.id}`} />}
+                    render={<Link href={`/assets/${asset.id}`} />}
                   >
                     <FactoryIcon />
                     <span className="truncate group-data-[collapsible=icon]:hidden">

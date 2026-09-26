@@ -301,7 +301,6 @@ async function main() {
     const assetId = assetIdByName.get(assetName)!;
     const faults = faultsByAsset.get(assetId) ?? [];
     const first = faults[0]?.at ?? new Date(BASE_TIME);
-    const last = faults[faults.length - 1]?.at ?? new Date(BASE_TIME + 34 * 86_400_000);
 
     for (const fault of faults.slice(0, 6)) {
       maintenanceLogs.push({
