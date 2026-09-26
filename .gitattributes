@@ -1,0 +1,11 @@
+# Raw datasets must be stored byte-for-byte.
+#
+# The AI4I CSV ships with CRLF line endings. Without `-text` git applies its
+# text/EOL heuristics, which rewrote the blob to LF on the first commit and
+# left the repository holding a file whose SHA-256 did not match the checksum
+# recorded in data/README.md. `-text` disables all conversion in both
+# directions, so a clone always reproduces the documented bytes.
+data/raw/*.csv -text
+
+# Lockfiles must not be rewritten either.
+package-lock.json -text
