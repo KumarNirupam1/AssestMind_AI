@@ -1,3 +1,5 @@
+import { ClerkProvider, Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { shadcn } from "@clerk/ui/themes";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Figtree } from "next/font/google";
 import "./globals.css";
@@ -33,17 +35,28 @@ export default function RootLayout({
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", figtree.variable)} suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <QueryProvider>
-        <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-        {children}
-        </ThemeProvider>
-        </QueryProvider>
-        </body>
+        <ClerkProvider appearance={{ theme: shadcn }}>
+          <QueryProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <header className="flex items-center justify-end gap-2 border-b px-4 py-2">
+                <Show when="signed-out">
+                  <SignInButton />
+                  <SignUpButton />
+                </Show>
+                <Show when="signed-in">
+                  <UserButton />
+                </Show>
+              </header>
+              {children}
+            </ThemeProvider>
+          </QueryProvider>
+        </ClerkProvider>
+      </body>
     </html>
   );
 }

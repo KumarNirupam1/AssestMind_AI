@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../lib/generated/prisma"
@@ -12,7 +7,204 @@ datasource db {
   provider = "postgresql"
 }
 
-model Test {
-  id String @id
-  title String
+enum AssetStatus {
+  OPERATIONAL
+  DEGRADED
+  MAINTENANCE
+  DOWN
+}
+
+enum QualityVariant {
+  L
+  M
+  H
+}
+
+enum FaultMode {
+  TWF
+  HDF
+  PWF
+  OSF
+  RNF
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum MaintenanceType {
+  PREVENTIVE
+  CORRECTIVE
+  INSPECTION
+  CALIBRATION
+}
+
+enum DocumentType {
+  MANUAL
+  SOP
+  FAULT_NARRATIVE
+  INSPECTION_REPORT
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+model Asset {
+  id           String      @id @default(cuid())
+  name         String      @unique
+  model        String
+  serialNumber String      @unique
+  manufacturer String?
+  site         String?
+  installedAt  DateTime?
+  status       AssetStatus @default(OPERATIONAL)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  components      Component[]
+  sensorReadings  SensorReading[]
+  faultRecords    FaultRecord[]
+  maintenanceLogs MaintenanceLog[]
+  documents       Document[]
+  chats           Chat[]
+}
+
+model Component {
+  id          String   @id @default(cuid())
+  assetId     String
+  name        String
+  type        String
+  criticality Severity @default(MEDIUM)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+}
+
+model SensorReading {
+  id                 String         @id @default(cuid())
+  assetId            String
+  recordedAt         DateTime
+  airTempK           Float
+  processTempK       Float
+  rotationalSpeedRpm Float
+  torqueNm           Float
+  toolWearMin        Float
+  qualityVariant     QualityVariant
+  machineFailure     Boolean        @default(false)
+  twf                Boolean        @default(false)
+  hdf                Boolean        @default(false)
+  pwf                Boolean        @default(false)
+  osf                Boolean        @default(false)
+  rnf                Boolean        @default(false)
+
+  asset       Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  faultRecord FaultRecord[]
+
+  @@index([assetId, recordedAt])
+  @@index([machineFailure])
+}
+
+model FaultRecord {
+  id              String    @id @default(cuid())
+  assetId         String
+  sensorReadingId String?
+  occurredAt      DateTime
+  mode            FaultMode
+  severity        Severity
+  description     String
+  resolvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  asset         Asset          @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  sensorReading SensorReading? @relation(fields: [sensorReadingId], references: [id], onDelete: SetNull)
+
+  @@index([assetId, occurredAt])
+  @@index([mode])
+}
+
+model MaintenanceLog {
+  id          String          @id @default(cuid())
+  assetId     String
+  performedAt DateTime
+  type        MaintenanceType
+  description String
+  technician  String?
+  createdAt   DateTime        @default(now())
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, performedAt])
+}
+
+model Document {
+  id          String       @id @default(cuid())
+  assetId     String?
+  title       String
+  docType     DocumentType
+  sourceKey   String
+  sourceUrl   String?
+  isSynthetic Boolean      @default(true)
+  ingestedAt  DateTime     @default(now())
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  asset  Asset?          @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  chunks DocumentChunk[]
+
+  @@index([assetId])
+}
+
+model DocumentChunk {
+  id             String                       @id @default(cuid())
+  documentId     String
+  ordinal        Int
+  content        String
+  tokenCount     Int
+  embedModel     String
+  embedDim       Int
+  chunkerVersion String
+  embedding      Unsupported("vector(1536)")?
+  searchVector   Unsupported("tsvector")?
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, ordinal])
+}
+
+model Chat {
+  id          String   @id @default(cuid())
+  clerkUserId String
+  assetId     String?
+  title       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  asset    Asset?        @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  messages ChatMessage[]
+
+  @@index([clerkUserId])
+  @@index([assetId])
+}
+
+model ChatMessage {
+  id              String      @id @default(cuid())
+  chatId          String
+  role            MessageRole
+  content         String
+  evidence        Json?
+  evidenceVersion Int         @default(1)
+  createdAt       DateTime    @default(now())
+
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@index([chatId, createdAt])
 }
