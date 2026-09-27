@@ -34,7 +34,7 @@ loop and a tool registry.
 │  Investigation chat (Client Component, useChat)          │
 │    → app/api/chat/route.ts                                │
 │         → agent loop (Vercel AI SDK: generateText/         │
-│           streamText, tools, maxSteps)                     │
+│           streamText, tools, stopWhen: isStepCount)         │
 │         → calls whichever tools it decides it needs         │
 │                                                          │
 │  Ingestion trigger (Server Action / Route Handler)         │
@@ -73,7 +73,8 @@ loop and a tool registry.
 ## 3. The agent, concretely
 
 Built with the Vercel AI SDK's tool-calling primitives (`generateText` /
-`streamText` with a `tools` object and `maxSteps` for multi-step agent
+`streamText` with a `tools` object and `stopWhen: isStepCount(5)` for
+multi-step agent
 loops) — this is the "agent" without needing a separate agent framework.
 The SDK already does the tool-call loop: model decides to call a tool →
 tool runs → result goes back to the model → model decides whether to call
@@ -213,10 +214,14 @@ that returns `ok: false` lets the model see the failure and adapt ("no
 fault history for that asset; here is what I can tell you instead"). This
 is a real behavioural difference worth a line in the paper.
 
-**Per-turn resource limits.** A `maxSteps` ceiling (start at 5), a
+**Per-turn resource limits.** A step ceiling of
+`stopWhen: isStepCount(5)` (v7 renamed both `maxSteps` → `stopWhen` and
+`stepCountIs` → `isStepCount`), a
 per-turn token budget, a per-tool timeout (~5 s) with a single retry before
 degrading to `ok: false`, and a per-user daily token quota enforced
-server-side. The chat route is the most expensive and most abusable
+server-side. Cost logging must read `usage` (all steps) *and*
+`finalStep.usage` (final step only), since v7 changed those to mean
+different things. The chat route is the most expensive and most abusable
 endpoint in the app; without these, one confused agent loop is a real bill.
 
 **Context-window management.** Six tools returning k results each will

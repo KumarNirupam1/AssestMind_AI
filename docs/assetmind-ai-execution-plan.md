@@ -1,5 +1,17 @@
 # AssetMind AI — Execution Plan (revised: agent architecture)
 
+## Build order (this is the authoritative sequence)
+
+1. Asset naming → 2. correctness fixes → 3. CI → 4. guardrail rules
+(Phase 2) → 5. ingestion (Phase 3) → 6. **freeze the evaluation protocol
+(Phase 6A)** → 7. agent (Phase 4) → 8. chat UI (Phase 5) → 9. run the
+evaluation (Phase 6B) → 10. analysis → 11. paper (Phase 8).
+
+Phase 6A is numbered out of order on purpose. It sits before the agent so the
+protocol predates the implementation and the numbers cannot be fitted to it.
+Everything else in this document is already in build order; Phase 7 (deploy)
+and Phase 9 (submission) run parallel to the tail as before.
+
 Same phase structure as before, rewritten where the agent/tool framing
 and the AWS/Inngest decisions actually change what gets built in each
 phase. See `assetmind-ai-architecture.md` for the full reasoning behind
@@ -13,6 +25,12 @@ that produced the P0/P1/P2 additions folded into the phases below.
 > dataset defines them as compound conditions, units were unstated, the demo
 > asset ("Pump-102") contradicts the dataset, and there was no test or CI
 > story.
+>
+> **Update (2026-09-27):** the guardrail rules have since been checked
+> against the dataset itself. HDF, PWF and OSF reproduce their label columns
+> exactly; TWF and RNF are irreducibly random; the "1413" threshold that
+> earlier drafts cited does not exist. See
+> `docs/adr/0002-ai4i-guardrail-rules.md` and `docs/AUDIT.md`.
 
 ---
 
@@ -123,7 +141,36 @@ test suite passes including all boundary cases.
 **Done when:** every synthetic asset has real, searchable documents behind
 it — verified by querying both the vector and keyword paths directly with
 `verify-retrieval.ts`, **before the agent is involved**. If keyword search
-is broken you want to know now, not in Phase 6.
+is broken you want to know now, not in Phase 6B.
+
+---
+
+## Phase 6A — Freeze the evaluation protocol (weeks 4, before Phase 4)
+
+**This phase is deliberately out of numeric order.** It runs after ingestion
+and *before* the agent exists, so the protocol cannot be reverse-engineered
+from results that already came in. Nothing in Phase 4 or 5 may be tuned once
+this is committed; changing it afterwards requires a new ADR, not an edit.
+
+- Build the labelled question set from the seed, with gold evidence IDs per
+  question (`[chunk:<id>#<n>]`, `[fault:<id>]`, `[guardrail:<mode>]`)
+- Fix the five tool-subset configs (baseline; retrieval ablations;
+  structured-delta; full) as *which tools are registered*, not as separate
+  code paths
+- Define every RQ1–RQ5 metric, **including which metrics are not meaningful**.
+  Per-mode TWF/RNF recall is not — those modes are irreducibly random
+  (`docs/adr/0002-ai4i-guardrail-rules.md`), so scoring them would measure
+  coin flips and invite a false negative finding
+- Fix N repeats per question and how variance is reported
+- Fix the cost/latency method. Log `usage` (all steps) and `finalStep.usage`
+  (final step) separately — AI SDK v7 changed these to mean different things
+- Fix the tool-call success/failure taxonomy
+- Implement the citation verifier as a script, so traceability is checked by
+  the machine and not by reading answers
+- Commit and date the protocol
+
+**Done when:** the protocol document is committed, the citation verifier runs,
+and every RQ has a metric that is actually computable. No agent code yet.
 
 ---
 
@@ -145,8 +192,9 @@ This replaces the old "build the RAG variant ladder" phase.
   harness and the UI selector call this same function, so demo and
   experiment cannot drift
 - Build the agent loop in `app/api/chat/route.ts` (`streamText` with
-  `tools` + `maxSteps`), with per-turn resource limits: step ceiling, token
-  budget, per-tool timeout with one retry, per-user daily quota
+  `tools` + `stopWhen: isStepCount(n)`), with per-turn resource limits: step
+  ceiling, token budget, per-tool timeout with one retry, per-user daily
+  quota
 - Per-tool result caps and a total evidence budget, documented as a known
   confound (config 5 carries more context than config 1)
 - Log every tool call + result into `ChatMessage.evidence` as it happens,
@@ -193,14 +241,18 @@ keyboard-navigable.
 
 ---
 
-## Phase 6 — Evaluation (weeks 8–10)
+## Phase 6B — Evaluation execution (weeks 8–10)
+
+The protocol itself was frozen in Phase 6A, before the agent existed. This
+phase *runs* it; it does not design it. Changing a metric here is a protocol
+change and needs an ADR.
 
 - Finalize query set + ground truth. State N, authorship, and who adjudicates
   disagreements. Include a held-out set, or report development-set results
   as such
 - Pin exact model versions (not aliases), temperature, max tokens, and
-  `maxSteps`; record them plus `SYSTEM_PROMPT_VERSION` and the **git commit
-  SHA** in every run's metadata
+  `stopWhen: isStepCount(n)`; record them plus `SYSTEM_PROMPT_VERSION` and
+  the **git commit SHA** in every run's metadata
 - Run every query through tool-subset configs 1–5, **N ≥ 3 repeats per
   cell**, reporting mean ± spread — LLM output is nondeterministic and a
   single run per cell cannot support a comparison table
@@ -226,7 +278,7 @@ committed script, with threat-to-validity and negative results written up.
 
 ---
 
-## Phase 7 — Deployment (weeks 9–10, parallel with Phase 6)
+## Phase 7 — Deployment (weeks 9–10, parallel with Phase 6B)
 
 - App on Vercel
 - Postgres on RDS or Aurora Serverless v2, pgvector enabled, schema
@@ -267,7 +319,7 @@ framing:
   engineering decision, with reasoning
 - **Related work** — 15–20 papers in four groups, stating what each does not
   do that this project does
-- **Threat to validity** and **negative results**, per Phase 6
+- **Threat to validity** and **negative results**, per Phase 6B
 - The guardrail rule engine's **validation score** against dataset labels
   (Phase 2) as a correctness claim
 - Data protection statement: no PII, synthetic data, and what is sent to
@@ -283,7 +335,7 @@ framing:
   (OSA-C / ISO 13374) where it fits
 
 **Done when:** report and paper draft exist in the agreed venue template,
-every claim traces to something measured in Phase 6, and a domain expert
+every claim traces to something measured in Phase 6B, and a domain expert
 has reviewed the technical content.
 
 ---
@@ -316,7 +368,7 @@ the actual app.
   committed, docs updated
 - **Eval regression golden set** in CI, so a prompt or tool-description
   edit that breaks tool selection is caught before it invalidates a
-  recorded Phase 6 run
+  recorded Phase 6B run
 
 ---
 

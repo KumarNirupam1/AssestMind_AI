@@ -136,7 +136,8 @@ Without this, the numbers are opinions.
 Add:
 
 - **Exact model + version pinned** (`gpt-4.1-2025-04-14`, not `gpt-4.1`),
-  plus temperature, max tokens, and tool `maxSteps`, recorded in **every**
+  plus temperature, max tokens, and the `stopWhen: isStepCount(n)` ceiling,
+  recorded in **every**
   eval run's metadata. Model aliases drift; unpinned results are
   unreproducible and a reviewer will call this out.
 - **Repeated runs.** LLM output is nondeterministic. Run each
@@ -262,10 +263,11 @@ in the paper.
 
 ### C4. Per-turn resource limits **[P0]**
 
-`maxSteps` is mentioned; the surrounding budget is not. Specify and
+The step ceiling (`stopWhen: isStepCount(n)`) is mentioned; the surrounding
+budget is not. Specify and
 enforce:
 
-- `maxSteps` (start at 5),
+- `stopWhen: isStepCount(5)`,
 - per-turn token ceiling,
 - per-tool timeout (e.g. 5 s) and retry policy (retry once, then
   `ok: false`),

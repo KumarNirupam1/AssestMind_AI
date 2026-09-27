@@ -47,13 +47,18 @@ jobs:
       - run: npm ci
 
       # Generates the Prisma client from schema.prisma. No database contact.
-      - run: npx prisma generate
+      # Pinned to v7: a bare `npx prisma` now resolves to the Prisma 8 RC CLI,
+      # which does not read schema.prisma and has no `generate` subcommand.
+      - run: npx prisma@7 generate
 
       - name: Lint
         run: npm run lint
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Guardrail rules vs dataset labels
+        run: npm run verify:rules
 
       - name: Unit tests
         run: npm test

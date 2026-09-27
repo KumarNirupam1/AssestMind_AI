@@ -27,7 +27,8 @@ default, `params`/`searchParams` are Promises, `middleware.ts` is now
   Deployed env needs a pooler (RDS Proxy/PgBouncer) — serverless + RDS
   exhausts `max_connections` without one.
 - Vercel AI SDK (`ai` package, **v7**) for the agent loop (`streamText`/
-  `generateText` with `tools` + `maxSteps`) and `useChat` on the frontend
+  `generateText` with `tools` + `stopWhen: isStepCount(n)`) and `useChat`
+  on the frontend
 - Zod for request validation, tool parameter schemas, and the versioned
   `ChatMessage.evidence` shape
 - Inngest for background jobs (document ingestion)
@@ -63,6 +64,28 @@ Corollary for CI: a bare `prisma migrate diff` drift gate is not viable here
 until it filters those two known statements. Use `migrate status` instead, or
 filter deliberately.
 
+**Pin `npx prisma@7` in CI.** `npx prisma` and `npm install prisma` now
+resolve to the **Prisma 8 RC CLI**, which does not read `schema.prisma` and has
+no `generate`, `migrate dev`, or `db push`. The local `^7.10.0` pin protects
+`npm run` scripts, but any `npx prisma ...` that falls through to a fetch
+would get the v8 CLI. Write `npx prisma@7 <cmd>` in workflows.
+
+## AI SDK v7 API contract (do not use v4/v5-era names)
+
+Verified against the official v7 migration guide and `ai@7.0.60` reference:
+
+- Step ceiling: `stopWhen: isStepCount(n)`. **`maxSteps` is gone**, and the
+  helper `stepCountIs` was renamed to `isStepCount`.
+- `system:` became **`instructions:`**. System messages passed inside
+  `prompt`/`messages` need `allowSystemInMessages: true`.
+- `onFinish` became **`onEnd`**.
+- `StreamTextResult.fullStream` became **`.stream`**.
+- Top-level `usage`, `content`, `toolCalls`, `files`, `sources`, and
+  `warnings` now cover **all** steps. Final-step-only values live under
+  **`.finalStep`**. For streaming, `await result.finalStep` first.
+- Evaluations must log `totalUsage` (all steps) and `finalStep.usage`
+  separately — RQ4 cost/latency reporting depends on not conflating them.
+
 ## Core architectural rule
 
 There is no RAG "pipeline." There is an agent with a tool registry:
@@ -73,13 +96,45 @@ sequence — if a task description implies that, flag it rather than
 building it.
 
 `checkGuardrails` is the AI4I 2020 rule set — **not** a trained ML model.
-Don't add model training unless explicitly asked. Two things about it are
-easy to get wrong and are documented in architecture §3.2:
+Don't add model training unless explicitly asked.
 
-- The rules are **compound conditions**, not single thresholds (e.g. HDF is
-  `(processTemp − airTemp) < 8.6 K` **AND** `rotationalSpeed < 1380 rpm`).
-- **RNF is a 0.1% random chance, not a rule.** Never fake it as a threshold.
-  Exclude it and document, or seed it and report the seed.
+The four rules below were **verified row-by-row against
+`data/raw/ai4i2020.csv`**, not copied from the docs. HDF, PWF and OSF
+reproduce their label columns *exactly*. Do not "simplify" them — see
+`docs/adr/0002-ai4i-guardrail-rules.md` for the measurements and the two
+rules that cannot be predicted.
+
+| Mode | Condition | Label rows | Reproduces label? |
+| --- | --- | --- | --- |
+| HDF | `abs(processTemp − airTemp) < 8.6` **AND** `speed < 1380` | 115 | exact, 115/115 |
+| PWF | power `= torque × 2π × speed / 60`; fail if `< 3500 W` or `> 9000 W` | 95 | exact, 95/95 |
+| OSF | `toolWear × torque > 11000` (L) / `12000` (M) / `13000` (H) | 98 | exact, 98/98 |
+| TWF | — not a threshold — | 46 | **impossible** |
+| RNF | — not a threshold — | 19 | **impossible** |
+
+Three traps that will silently corrupt RQ3 if you get them wrong:
+
+- **OSF is per-product-type.** A flat `11000` threshold for every type
+  yields 125 rows instead of 98. The `L`/`M`/`H` split is load-bearing.
+- **PWF is power in watts, not torque × rpm.** `torque × speed` ranges
+  10,967–99,980 across the dataset, so any "torque × speed" rule is wrong
+  by construction. The `2π/60` conversion is required.
+- **HDF needs the absolute difference.** The spec says "the difference
+  between air- and process temperature is below 8.6 K". Read literally as
+  `airTemp − processTemp < 8.6` it fires on nearly every row. Use
+  `Math.abs(...)`. (On AI4I `process > air` always, so the abs and signed
+  forms coincide here — but only because of that.)
+- **There is no "1413" rule.** 1413 is just a rotational-speed value that
+  happens to appear in 30 rows. Any doc claiming a "TWF torque × speed
+  threshold of 1413" is wrong. Do not reintroduce it.
+- **TWF and RNF are random, not thresholded.** In AI4I the tool is replaced
+  *or fails* at a randomly chosen wear time in 200–240 min, 69 replaced /
+  51 failed. Of the 790 rows in that wear band only 46 are labelled TWF,
+  and 3 TWF rows sit outside the band entirely. RNF is a per-row coin
+  flip. Neither is predictable from process parameters, so per-mode
+  precision/recall for them is **not a meaningful metric**. Report the
+  deterministic three, and state TWF/RNF as irreducibly random rather
+  than scoring them. See the ADR.
 
 Temperatures are Kelvin (dataset-native). Store K, display °C.
 
@@ -107,7 +162,8 @@ parsing it. It has a UTF-8 BOM (first column is `﻿UDI`, not `UDI`) and
 - Answers carry machine-checkable citations (`[chunk:<id>#<n>]`,
   `[fault:<id>]`, `[guardrail:<mode>]`) so traceability is verified by a
   script, not by eye.
-- Per-turn resource limits are mandatory: `maxSteps` ceiling, token budget,
+- Per-turn resource limits are mandatory: step ceiling
+  (`stopWhen: isStepCount(n)`), token budget,
   per-tool timeout with one retry, per-user daily quota.
 - The system prompt is versioned and held constant across eval configs; log
   `SYSTEM_PROMPT_VERSION` and the git SHA with every run.
