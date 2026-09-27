@@ -1,3 +1,4 @@
+import { deriveHealth, type DerivedHealth } from "@/features/assets/health";
 import { prisma } from "@/lib/db";
 
 const ASSET_PAGE_SIZE = 25;
@@ -67,7 +68,11 @@ export type AssetHealthRow = {
   model: string;
   manufacturer: string | null;
   site: string | null;
+  /** Operator-set field, as stored. Not a health signal. */
   status: string;
+  /** Computed from unresolved faults over total readings. */
+  health: DerivedHealth;
+  unresolvedRate: number;
   readings: number;
   failures: number;
   unresolved: number;
@@ -124,6 +129,13 @@ export async function getAssetHealth({
         manufacturer: a.manufacturer,
         site: a.site,
         status: a.status,
+        health: deriveHealth({
+          unresolvedCount: a.faultRecords.length,
+          readingCount: a._count.sensorReadings,
+        }),
+        unresolvedRate: a._count.sensorReadings
+          ? a.faultRecords.length / a._count.sensorReadings
+          : 0,
         readings: a._count.sensorReadings,
         failures: a._count.faultRecords,
         unresolved: a.faultRecords.length,

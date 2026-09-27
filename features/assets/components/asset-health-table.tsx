@@ -6,6 +6,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import Link from "next/link";
+
 import { StatusBadge } from "@/features/assets/components/badges";
 import type { AssetHealthRow } from "@/features/assets/queries";
 import {
@@ -25,7 +27,9 @@ export function AssetHealthTable({ rows }: { rows: AssetHealthRow[] }) {
       <TableHeader>
         <TableRow>
           <TableHead>Asset</TableHead>
-          <TableHead>Status</TableHead>
+          <TableHead title="Derived from unresolved faults over total readings">
+            Health (derived)
+          </TableHead>
           <TableHead className="text-right">Readings</TableHead>
           <TableHead className="text-right">Faults</TableHead>
           <TableHead className="text-right">Open</TableHead>
@@ -41,19 +45,22 @@ export function AssetHealthTable({ rows }: { rows: AssetHealthRow[] }) {
           return (
             <TableRow key={row.id}>
               <TableCell>
-                <a
+                <Link
                   href={`/assets/${row.id}`}
                   className="font-medium underline-offset-4 hover:underline"
                 >
                   {row.name}
-                </a>
+                </Link>
                 <p className="text-xs text-muted-foreground">
                   {row.manufacturer} {row.model}
                   {row.site ? ` · ${row.site}` : ""}
                 </p>
               </TableCell>
               <TableCell>
-                <StatusBadge status={row.status} />
+                <StatusBadge status={row.health} />
+                <p className="mt-0.5 text-[10px] tabular-nums text-muted-foreground">
+                  {formatPercent(row.unresolvedRate, 2)} unresolved
+                </p>
               </TableCell>
               <TableCell className="text-right tabular-nums">
                 {formatInteger(row.readings)}

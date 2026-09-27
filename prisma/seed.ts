@@ -12,15 +12,36 @@ const CHUNK_TARGET_CHARS = 700;
 const BASE_TIME = Date.UTC(2026, 0, 5, 6, 0, 0);
 const MINUTES_PER_READING = 5;
 
+/**
+ * Asset identifiers.
+ *
+ * These follow the `PUMP-nnn` pump convention rather than describing the
+ * AI4I hardware, because the original execution plan built its Phase 9 demo
+ * around an asset called `Pump-102` and the team kept that framing. The
+ * dataset is a simulated milling machine, so this is a deliberate
+ * abstraction, not an accident. `docs/adr/0001-asset-naming.md` states the
+ * abstraction and argues it, which is what
+ * `docs/assetmind-ai-architecture.md` §3 requires before the name can be
+ * used in the paper.
+ *
+ * Consequence to keep in mind: the Phase 2 guardrail rules are milling
+ * rules (tool wear in minutes, torque x spindle speed, process vs air
+ * temperature), so `checkGuardrails` reasons about cutting behaviour on a
+ * nominally-pump asset. That is the cost of this choice and it is the first
+ * thing a viva panel should be asked about.
+ *
+ * Do not confuse these with the Haas `VMC-850E` model strings below, which
+ * are real product names and are not affected by this scheme.
+ */
 const ASSET_NAMES = [
-  "MC-101",
-  "MC-102",
-  "MC-103",
-  "MC-201",
-  "MC-202",
-  "MC-301",
-  "MC-302",
-  "MC-401",
+  "PUMP-101",
+  "PUMP-102",
+  "PUMP-103",
+  "PUMP-201",
+  "PUMP-202",
+  "PUMP-301",
+  "PUMP-302",
+  "PUMP-401",
 ] as const;
 
 const ASSET_SPECS = [

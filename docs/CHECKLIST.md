@@ -14,7 +14,7 @@ if a command produced the result, not because something "should" work.
 - [x] Project rules consolidated in `AGENTS.md`; migration safety rules recorded
 - [x] AI4I dataset downloaded, provenance + CC BY-NC-SA licence documented
 - [x] Dataset bytes pinned so a clone reproduces the documented SHA-256
-- [ ] Final asset naming decided (`MC-101` is a provisional seed default)
+- [x] Final asset naming decided — `PUMP-101`…`PUMP-401`, abstraction stated and argued in `docs/adr/0001-asset-naming.md`
 - [ ] Evaluation protocol written down **before** implementation, to avoid retrofitting metrics
 - [ ] Final tool registry / action set agreed
 - [ ] Manual / SOP source list collected

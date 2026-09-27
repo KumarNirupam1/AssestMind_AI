@@ -103,6 +103,13 @@ three ways, explicitly, and document the choice:
 
 Option (a) is cheapest and the most defensible. This is a team call.
 
+> **Resolved 2026-09-27 — option (b) taken.** The team kept the `Pump-102`
+> framing from the original task description and adopted `PUMP-101`…`PUMP-401`.
+> The abstraction is stated and argued in `docs/adr/0001-asset-naming.md`, which
+> is the condition the architecture doc attaches to a non-literal name. The
+> accepted cost: the Phase 2 guardrail rules are milling-derived and must never
+> be described as pump physics.
+
 ### A6. No test strategy, no CI, no `typecheck` script **[P0]**
 
 `package.json` has `dev`, `build`, `start`, `lint` only. There is no
