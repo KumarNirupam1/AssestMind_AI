@@ -46,7 +46,9 @@ export default async function DashboardPage({
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Fleet dashboard</h1>
           <p className="text-sm text-muted-foreground">
-            Synthetic machining-centre fleet seeded from the AI4I 2020 dataset.
+            Synthetic pumping assets. Sensor channels come from AI4I 2020, a
+            milling-machine dataset, used here as a declared stand-in — see
+            ADR 0001.
           </p>
         </div>
         <p className="text-xs text-muted-foreground">
@@ -58,7 +60,7 @@ export default async function DashboardPage({
         <StatCard
           title="Assets"
           value={formatInteger(summary.assets)}
-          hint="Synthetic machining centres"
+          hint="Pumping assets, AI4I-backed"
           icon={FactoryIcon}
         />
         <StatCard

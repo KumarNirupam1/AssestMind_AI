@@ -36,12 +36,12 @@ if a command produced the result, not because something "should" work.
 - [x] Vitest configured and a `test` script added
 - [x] Unit tests for display helpers and the Kelvin/Celsius conversion
 - [ ] Unit tests for guardrail thresholds and CSV parsing
-- [ ] CI workflow: typecheck, test, lint, build
+- [x] CI workflow: lint, typecheck, test, build (`.github/workflows/ci.yml`)
 - [ ] CI migration-drift gate (blocked on the `searchVector` false positive — see below)
 - [ ] Chunk re-index script for when embeddings change
 - [ ] Least-privilege application database user (not the Neon owner)
-- [ ] Manual sign-up → sign-in → dashboard walkthrough on Windows
-- [ ] Dashboard numbers eyeballed against the seeded dataset
+- [x] Manual sign-up → sign-in → dashboard walkthrough on Windows
+- [x] Dashboard numbers eyeballed against the seeded dataset (faults, modes, unresolved and mean torque/wear all reconcile with the source)
 
 ### Known blockers
 

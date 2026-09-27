@@ -1,0 +1,62 @@
+name: CI
+
+# Runs on every push to main and every pull request. Deliberately does not
+# touch the database: there is no `migrate deploy` and no `db seed` here, so a
+# CI run can never mutate dev or production data.
+#
+# There is also no `prisma migrate diff` drift gate. Prisma cannot represent
+# `vector` columns, the generated `searchVector` tsvector, or their GIN index,
+# so a raw diff always reports the two known false positives. Reintroducing
+# drift detection means filtering those statements first, which is tracked in
+# docs/CHECKLIST.md rather than left as a permanently red build.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      # prisma7.config.ts calls env("DATABASE_URL"), which throws when the
+      # variable is absent. `prisma generate` only needs the string to exist;
+      # it never opens a connection, so this placeholder is never dialled.
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+
+      # Clerk reads these while proxy.ts is imported during the build. They are
+      # syntactically valid placeholders and authenticate nothing.
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk
+      CLERK_SECRET_KEY: sk_test_ci_placeholder_not_a_real_secret
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Matches the Node 22 toolchain the project is developed against.
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      # Generates the Prisma client from schema.prisma. No database contact.
+      - run: npx prisma generate
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build
