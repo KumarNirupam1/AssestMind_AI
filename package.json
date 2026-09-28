@@ -11,7 +11,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "verify:rules": "node scripts/verify-guardrail-rules.mjs",
-    "verify:db": "node scripts/verify-db.mjs"
+    "verify:db": "node scripts/verify-db.mjs",
+    "verify:retrieval": "node scripts/verify-retrieval.mjs",
+    "embed:backfill": "node scripts/backfill-embeddings.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

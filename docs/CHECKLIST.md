@@ -94,12 +94,41 @@ and it runs in CI. Full reasoning in
 
 ## Phase 3 — Ingestion pipeline
 
-- [ ] Inngest function registered and observable
-- [ ] Manual upload path
-- [ ] Parser: CSV and PDF, with AI4I column mapping
-- [ ] Chunking with citation-preserving provenance
-- [ ] Embedding job populates `DocumentChunk.embedding`
-- [ ] Idempotent re-runs
+**Decision (recorded before implementation):** Phase 3 embeds the 32 seeded
+synthetic documents / 66 chunks. Real manuals are a later second ingestion
+dataset and are explicitly not blocking. RQ1's first evaluation therefore uses
+**synthetic source documents**, which the paper must state as a limitation of
+synthetic text — the citation machinery still cites real stored chunks.
+
+- [x] Embedding provider abstraction (`features/ingestion/embedding.ts`)
+      — offline deterministic fixture for CI/tests + a deferred OpenAI
+      `text-embedding-3-small` provider behind one `resolveEmbeddingProvider`
+      switch. No API key needed to build or test; `ASSETMIND_EMBED_PROVIDER=openai`
+      selects the real model.
+- [x] Backfill planner + runner (`features/ingestion/backfill.ts`,
+      `scripts/backfill-embeddings.mjs`, `npm run embed:backfill`)
+- [x] Idempotent re-runs — only `embedding IS NULL` rows are considered, writes
+      are per-chunk-id, nothing creates chunks; a second run is a no-op. Proven
+      in unit tests, not asserted.
+- [x] Provenance preserved — only `embedding` is written;
+      `sourceKey`/`isSynthetic`/`ordinal`/`chunkerVersion` are untouched.
+- [x] Model-gated writes — a chunk recorded against a different model is
+      skipped, so the offline fixture can never poison rows recorded as
+      `text-embedding-3-small` (verified by test).
+- [x] Retrieval query builders (`features/ingestion/retrieval.ts`) — exact
+      scans, cosine `<=>` shared between write and query paths, GIN-backed
+      keyword search, provenance columns carried, `embedModel` pinning.
+- [x] Retrieval verification script (`scripts/verify-retrieval.mjs`,
+      `npm run verify:retrieval`)
+- [ ] **Backfill executed against the live database** — requires the user to
+      add `OPENAI_API_KEY` to `.env` and run `ASSETMIND_EMBED_PROVIDER=openai
+      npm run embed:backfill`, then `npm run verify:retrieval`
+- [ ] Inngest function registered and observable (deferred with the real-docs
+      decision; only matters for the second ingestion dataset)
+- [ ] Manual upload path (deferred, same reason)
+- [ ] Parser: CSV and PDF, with AI4I column mapping (PDF via `unpdf`, deferred)
+- [ ] Chunking with citation-preserving provenance (seed already produces
+      chunks; a re-chunker for new docs is deferred with upload)
 
 ## Phase 4 — Agent + tools
 
