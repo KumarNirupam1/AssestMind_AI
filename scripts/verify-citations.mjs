@@ -13,7 +13,7 @@
 //   npm run verify:citations -- --runs eval/examples/example-run.json
 
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, isAbsolute } from "node:path";
 import { argv } from "node:process";
 
 import { parseRunManifest } from "../features/evaluation/run-manifest.ts";
@@ -30,18 +30,15 @@ import { parseQuestionSet } from "../features/evaluation/question-set.ts";
 
 const arg = (flag, fallback) => {
   const at = argv.indexOf(flag);
-  return at !== -1 ? argv[at + 1] : fallback;
+  const value = at !== -1 ? argv[at + 1] : fallback;
+  return isAbsolute(value) ? value : join(process.cwd(), value);
 };
 
-const runsPath = arg("--runs", join("eval", "examples", "example-run.json"));
-const questionsPath = arg("--questions", join("eval", "labelled-questions.v1.json"));
+const runsPath = arg("--runs", "eval/examples/example-run.json");
+const questionsPath = arg("--questions", "eval/labelled-questions.v1.json");
 
-const manifest = parseRunManifest(
-  JSON.parse(readFileSync(join(process.cwd(), runsPath), "utf8")),
-);
-const questions = parseQuestionSet(
-  JSON.parse(readFileSync(join(process.cwd(), questionsPath), "utf8")),
-).questions;
+const manifest = parseRunManifest(JSON.parse(readFileSync(runsPath, "utf8")));
+const questions = parseQuestionSet(JSON.parse(readFileSync(questionsPath, "utf8"))).questions;
 const byQuestionId = new Map(questions.map((q) => [q.id, q]));
 
 console.log(`runs: ${manifest.runs.length}`);
