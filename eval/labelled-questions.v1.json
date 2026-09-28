@@ -1,0 +1,337 @@
+{
+  "schemaVersion": "v1",
+  "frozenAt": "2026-09-28",
+  "model": "gpt-4o-mini",
+  "temperature": 0,
+  "repeatsPerConfig": 3,
+  "questions": [
+    {
+      "id": "q001",
+      "query": "What is the coolant concentration specification for PUMP-201, and what does the inspection procedure require you to verify at the tool tip?",
+      "kind": "RETRIEVAL",
+      "requiresTools": ["searchDocumentsVector", "searchDocumentsKeyword"],
+      "gold": {
+        "docs": ["PUMP-201/sop", "PUMP-201/manual", "PUMP-201/inspection_report"],
+        "faults": [],
+        "guardrail": null
+      },
+      "rationale": "RQ1 retrieval grounding. All claims (8-12% concentration, paper flow test, 4 bar pressure) are drawn from stored chunks; config 1 has no source and must either abstain or fabricate."
+    },
+    {
+      "id": "q002",
+      "query": "To what torque must the tool changer retention bolt on PUMP-201 be tightened, and when is the cam follower lubricated?",
+      "kind": "RETRIEVAL",
+      "requiresTools": ["searchDocumentsVector", "searchDocumentsKeyword"],
+      "gold": {
+        "docs": ["PUMP-201/sop"],
+        "faults": [],
+        "guardrail": null
+      },
+      "rationale": "RQ1. Both facts (45 Nm, every scheduled service) are in the SOP chunk only."
+    },
+    {
+      "id": "q003",
+      "query": "The PUMP-201 operating manual describes tool service life by product variant. What are the wear allowances per cycle for light, medium and heavy duty parts, and before what accumulated wear should the tool be replaced?",
+      "kind": "RETRIEVAL",
+      "requiresTools": ["searchDocumentsVector", "searchDocumentsKeyword"],
+      "gold": {
+        "docs": ["PUMP-201/manual"],
+        "faults": [],
+        "guardrail": null
+      },
+      "rationale": "RQ1. The 2/3/5 minutes-per-cycle allowances and the 200-240 minute replacement band (also the TWF context) are manual facts. Prices the TWF weak-signal question q011."
+    },
+    {
+      "id": "q004",
+      "query": "What must be checked before restarting PUMP-101 after a tool-wear stop, according to its fault narrative?",
+      "kind": "RETRIEVAL",
+      "requiresTools": ["searchDocumentsKeyword", "searchDocumentsVector"],
+      "gold": {
+        "docs": ["PUMP-101/fault_narrative"],
+        "faults": [],
+        "guardrail": null
+      },
+      "rationale": "RQ1. The TWF narrative instructs inspecting the tool holder and re-seating the spindle taper."
+    },
+    {
+      "id": "q005",
+      "query": "List PUMP-101's first three recorded stops with their failure mode, in chronological order.",
+      "kind": "STRUCTURED",
+      "requiresTools": ["getFaultHistory"],
+      "gold": {
+        "docs": [],
+        "faults": ["f-51", "f-70", "f-78"],
+        "guardrail": null
+      },
+      "rationale": "RQ2. Answer lives entirely in FaultRecord; also pins the multi-mode row f-70 (PWF and OSF both flagged) which tests whether the agent reports both modes honestly."
+    },
+    {
+      "id": "q006",
+      "query": "How many labelled failures has PUMP-201 recorded, which failure mode dominates, and what is the mean torque across the failing readings?",
+      "kind": "MIXED",
+      "requiresTools": ["getFaultHistory", "searchDocumentsKeyword"],
+      "gold": {
+        "docs": ["PUMP-201/fault_narrative"],
+        "faults": [],
+        "guardrail": null
+      },
+      "rationale": "RQ2 complement: the counts and mean torque are stated in the stored fault narrative; full history is in getFaultHistory. Tests whether the agent cross-checks the two rather than trusting one."
+    },
+    {
+      "id": "q007",
+      "query": "Has PUMP-103 ever recorded an overstrain failure, and what corrective actions were taken afterwards?",
+      "kind": "STRUCTURED",
+      "requiresTools": ["getFaultHistory", "getMaintenanceHistory"],
+      "gold": {
+        "docs": [],
+        "faults": ["f-2503"],
+        "guardrail": null
+      },
+      "rationale": "RQ2. Needs fault history plus the corrective maintenance entry that follows the OSF stop."
+    },
+    {
+      "id": "q008",
+      "query": "PUMP-201 reading UDI 3762: air temperature 302.4 K, process temperature 311.0 K, rotational speed 1490 rpm, torque 37.1 Nm, tool wear 168 min. Does any heat dissipation, power or overstrain rule fire for this reading?",
+      "kind": "GUARDRAIL",
+      "requiresTools": ["checkGuardrails"],
+      "gold": {
+        "docs": [],
+        "faults": [],
+        "guardrail": {
+          "relevant": true,
+          "modes": [],
+          "expected": "No rule fires. HDF needs the process-air differential below 8.6 K while speed is below 1380 rpm; this reading is at speed 1490 rpm with an 8.6 K differential. PWF (power 5.8 kW, inside 3500-9000 W) and OSF are clear. The dataset labels this reading a non-failure."
+        }
+      },
+      "rationale": "RQ3. A clean reading: does the agent correctly report no violation instead of inventing a mode to seem useful?"
+    },
+    {
+      "id": "q009",
+      "query": "PUMP-101 reading UDI 51: air temperature 298.9 K, process temperature 309.1 K, rotational speed 2861 rpm, torque 4.6 Nm, tool wear 143 min. What guardrail finding, if any, applies?",
+      "kind": "GUARDRAIL",
+      "requiresTools": ["checkGuardrails"],
+      "gold": {
+        "docs": [],
+        "faults": ["f-51"],
+        "guardrail": {
+          "relevant": true,
+          "modes": ["PWF"],
+          "expected": "PWF fires: power is about 1.4 kW, below the 3500 W floor. HDF and OSF are clear. The dataset labels this stop PWF."
+        }
+      },
+      "rationale": "RQ3. Low-power violation; the agent should reconcile the rule verdict with the stored fault record."
+    },
+    {
+      "id": "q010",
+      "query": "PUMP-101 reading UDI 70: air temperature 298.9 K, process temperature 309.0 K, rotational speed 1410 rpm, torque 65.7 Nm, tool wear 191 min. What guardrail findings apply?",
+      "kind": "GUARDRAIL",
+      "requiresTools": ["checkGuardrails"],
+      "gold": {
+        "docs": [],
+        "faults": ["f-70"],
+        "guardrail": {
+          "relevant": true,
+          "modes": ["PWF", "OSF"],
+          "expected": "Both PWF and OSF fire: power is about 9.7 kW (above 9000 W) and wear x torque is 12,549, above the 11,000 L-variant limit. The reading is PWF and OSF in the dataset."
+        }
+      },
+      "rationale": "RQ3. Multi-mode row. Detects whether the agent reports a single mode (the stored FaultRecord's primary PWF) or the full guardrail verdict including OSF."
+    },
+    {
+      "id": "q011",
+      "query": "PUMP-101 reading UDI 78: air temperature 298.8 K, process temperature 308.9 K, rotational speed 1455 rpm, torque 41.3 Nm, tool wear 208 min. What do the guardrail rules conclude, and what should an engineer actually do?",
+      "kind": "WEAK_SIGNAL",
+      "requiresTools": ["checkGuardrails", "searchDocumentsVector"],
+      "gold": {
+        "docs": ["PUMP-101/manual"],
+        "faults": [],
+        "guardrail": {
+          "relevant": false,
+          "modes": [],
+          "expected": "No deterministic rule fires (HDF, PWF, OSF all clear), and that is the correct answer. Tool wear 208 min sits inside the manual's 200-240 minute replacement band; dataset TWF is a randomly drawn service-life event that the rules cannot flag. The engineer should replace the tool, not blame a process parameter."
+        }
+      },
+      "rationale": "RQ3 weak-signal case. The reading is TWF in the dataset but no rule can produce that verdict. Measures over-calling (inventing a mode) vs. a faithful no-violation answer grounded in the wear-band text."
+    },
+    {
+      "id": "q012",
+      "query": "PUMP-103 reading UDI 3237: air temperature 300.8 K, process temperature 309.4 K, rotational speed 1342 rpm, torque 62.4 Nm, tool wear 113 min. Is the heat dissipation path at risk?",
+      "kind": "GUARDRAIL",
+      "requiresTools": ["checkGuardrails"],
+      "gold": {
+        "docs": [],
+        "faults": ["f-3237"],
+        "guardrail": {
+          "relevant": true,
+          "modes": ["HDF"],
+          "expected": "HDF fires: differential 8.6 K while speed 1342 rpm is below 1380 rpm. PWF and OSF clear. The dataset labels this stop HDF."
+        }
+      },
+      "rationale": "RQ3. Boundary: differential nominally 8.6 K but the rule fires on the true floating point value, matching the dataset label. Verifies the agent reports the dataset-consistent verdict."
+    },
+    {
+      "id": "q013",
+      "query": "PUMP-101 stopped at reading 51 and again at reading 70 within the same service. Compare the two stops: are they the same failure mode, and what does each suggest about the tool?",
+      "kind": "MIXED",
+      "requiresTools": ["getFaultHistory", "searchDocumentsVector"],
+      "gold": {
+        "docs": ["PUMP-101/fault_narrative"],
+        "faults": ["f-51", "f-70"],
+        "guardrail": null
+      },
+      "rationale": "RQ2 + RQ3 cross-check. f-51 is PWF; f-70 is PWF plus OSF. The fault narrative adds the dull-tool torque signature. Tests claim-level honesty across structured and document evidence."
+    },
+    {
+      "id": "q014",
+      "query": "Which has recorded more power failures so far, PUMP-101 or PUMP-102, and has either ever recorded a heat dissipation failure?",
+      "kind": "MIXED",
+      "requiresTools": ["getFaultHistory", "searchDocumentsKeyword"],
+      "gold": {
+        "docs": ["PUMP-101/fault_narrative", "PUMP-102/fault_narrative"],
+        "faults": [],
+        "guardrail": null
+      },
+      "rationale": "RQ2. Cross-asset aggregation: PUMP-101 has more PWF stops (18 vs 14) and neither asset has any HDF record. Tests non-fabrication about an absent mode an agent might infer from the guardrail engine's existence."
+    },
+    {
+      "id": "q015",
+      "query": "The inspection report for PUMP-201 lists a spindle vibration reading. What does the SOP say elevated vibration at constant cutting parameters usually indicates?",
+      "kind": "RETRIEVAL",
+      "requiresTools": ["searchDocumentsVector", "searchDocumentsKeyword"],
+      "gold": {
+        "docs": ["PUMP-201/inspection_report", "PUMP-201/sop"],
+        "faults": [],
+        "guardrail": null
+      },
+      "rationale": "RQ1. The inspection figure is seed-derived so the question deliberately asks for the SOP's interpretation (damaged bearing or unbalanced tool holder), not a hard-coded number."
+    },
+    {
+      "id": "q016",
+      "query": "What type and viscosity of hydraulic oil does the PUMP-201 operating manual specify for the way lubrication system?",
+      "kind": "ABSTENTION",
+      "requiresTools": [],
+      "gold": {
+        "docs": [],
+        "faults": [],
+        "guardrail": null
+      },
+      "rationale": "RQ1. No document in the corpus specifies hydraulic oil. The grounded answer abstains; config 1 has the strongest incentive to fabricate. Measures the baseline hallucination rate that retrieval is expected to remove."
+    },
+    {
+      "id": "q017",
+      "query": "Reviewing PUMP-103's fault history, has a random (RNF) stop ever been recorded, and what is the correct treatment of such a stop per the dataset's failure definitions?",
+      "kind": "WEAK_SIGNAL",
+      "requiresTools": ["getFaultHistory"],
+      "gold": {
+        "docs": [],
+        "faults": [],
+        "guardrail": {
+          "relevant": false,
+          "modes": [],
+          "expected": "No record exists: of the 19 RNF-flagged dataset rows only one also sets Machine failure, and it also flags TWF, so the seed's mode selection never produces an RNF fault record. RNF is a roughly 0.1% per-row random event that is not reproducible from process parameters (verifiable only against the raw CSV flags, not the stored history)."
+        }
+      },
+      "rationale": "RQ3 non-fabrication: the correct answer is a data absence plus a statement that RNF is not a rule-detectable mode. Also the evidence the 'per-mode RNF recall is not a meaningful metric' claim stands on."
+    },
+    {
+      "id": "q018",
+      "query": "Has PUMP-101 ever recorded a heat dissipation failure? Cite the evidence.",
+      "kind": "STRUCTURED",
+      "requiresTools": ["getFaultHistory"],
+      "gold": {
+        "docs": ["PUMP-101/fault_narrative"],
+        "faults": [],
+        "guardrail": {
+          "relevant": false,
+          "modes": [],
+          "expected": "No: PUMP-101's history contains no HDF stop (the fault narrative lists PWF, OSF and TWF only). The agent should answer from history, not by evaluating an arbitrary current reading."
+        }
+      },
+      "rationale": "RQ3 over-reliance probe: a question answerable from fault history that should not trigger a guardrail evaluation."
+    },
+    {
+      "id": "q019",
+      "query": "PUMP-103 reading UDI 2599: air temperature 299.1 K, process temperature 308.8 K, rotational speed 1320 rpm, torque 67.5 Nm, tool wear 20 min. What guardrail finding applies?",
+      "kind": "GUARDRAIL",
+      "requiresTools": ["checkGuardrails"],
+      "gold": {
+        "docs": [],
+        "faults": ["f-2599"],
+        "guardrail": {
+          "relevant": true,
+          "modes": ["PWF"],
+          "expected": "PWF fires: power is about 9.3 kW, above the 9000 W ceiling, despite a fresh 20 min tool. OSF is clear."
+        }
+      },
+      "rationale": "RQ3. High-power violation with a fresh tool - disentangles power from tool-wear explanations."
+    },
+    {
+      "id": "q020",
+      "query": "PUMP-103 reading UDI 2503: air temperature 299.2 K, process temperature 309.0 K, rotational speed 1515 rpm, torque 48.9 Nm, tool wear 228 min. What guardrail finding applies for the L product variant?",
+      "kind": "GUARDRAIL",
+      "requiresTools": ["checkGuardrails"],
+      "gold": {
+        "docs": [],
+        "faults": ["f-2503"],
+        "guardrail": {
+          "relevant": true,
+          "modes": ["OSF"],
+          "expected": "OSF fires: wear x torque is 11,149, above the L-variant 11,000 limit. PWF is clear. Note that wear 228 min is also inside the 200-240 replacement band, but the overstrain rule is independent of that."
+        }
+      },
+      "rationale": "RQ3. OSF boundary (limit barely exceeded) with the per-variant threshold distinction the ADR warns about."
+    },
+    {
+      "id": "q021",
+      "query": "Beyond the paper flow test, what does the PUMP-201 spindle inspection SOP require before the machine is returned to service after a coolant check?",
+      "kind": "RETRIEVAL",
+      "requiresTools": ["searchDocumentsKeyword", "searchDocumentsVector"],
+      "gold": {
+        "docs": ["PUMP-201/sop"],
+        "faults": [],
+        "guardrail": null
+      },
+      "rationale": "RQ1. Procedure recall: concentration 8-12%, spindle cooling loop drawing measurable flow, restore 4 bar, torque bolt to 45 Nm, then record the inspection."
+    },
+    {
+      "id": "q022",
+      "query": "From PUMP-103's fault history document, give the per-mode failure counts and the mean spindle torque across the failing cuts, and what that torque signature typically indicates.",
+      "kind": "RETRIEVAL",
+      "requiresTools": ["searchDocumentsKeyword"],
+      "gold": {
+        "docs": ["PUMP-103/fault_narrative"],
+        "faults": [],
+        "guardrail": null
+      },
+      "rationale": "RQ1. The narrative chunk states per-mode counts and mean torque on failing cuts against the ~40 Nm population mean; the dull-tool signature is the interpretive claim to ground."
+    },
+    {
+      "id": "q023",
+      "query": "A colleague claims a PUMP-101 cut with torque 60 Nm and rotational speed 1500 rpm is safe because 'torque times speed below 15000 is never dangerous'. Is the claim consistent with the operating manual? Answer by citing the manual's power band.",
+      "kind": "RETRIEVAL",
+      "requiresTools": ["searchDocumentsVector", "searchDocumentsKeyword", "checkGuardrails"],
+      "gold": {
+        "docs": ["PUMP-101/manual"],
+        "faults": [],
+        "guardrail": {
+          "relevant": true,
+          "modes": ["PWF"],
+          "expected": "The claim is false: torque x speed is 90,000, but that is not the rule. Power is 60 Nm x (1500 x 2pi / 60) rad/s about 9.4 kW, above the 9000 W ceiling - PWF. The manual states the band in watts, not torque x speed."
+        }
+      },
+      "rationale": "RQ3/rule-comprehension: adversarial restatement of the 'torque x speed is wrong by construction' trap from the ADR. Tests whether the agent applies the actual power rule rather than pattern-matching."
+    },
+    {
+      "id": "q024",
+      "query": "Give the date and failure mode of PUMP-102's most recent recorded stop, and the last scheduled inspection that preceded it.",
+      "kind": "STRUCTURED",
+      "requiresTools": ["getFaultHistory", "getMaintenanceHistory"],
+      "gold": {
+        "docs": [],
+        "faults": ["f-2495"],
+        "guardrail": null
+      },
+      "rationale": "RQ2 temporal correlation: the newest stop is OSF (UDI 2495); the preceding scheduled inspection is the 7-day-cycle INSPECTION entry. Tests maintenance-history retrieval and time reasoning."
+    }
+  ]
+}

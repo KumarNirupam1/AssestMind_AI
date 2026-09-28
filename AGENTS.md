@@ -2,7 +2,8 @@
 
 Read `docs/assetmind-ai-architecture.md` and `docs/assetmind-ai-execution-plan.md`
 for full reasoning, and `docs/assetmind-ai-plan-review.md` for the P0/P1/P2 gap
-list that the other two docs were revised against. This file is the short
+list that the other two docs were revised against. The evaluation protocol is
+FROZEN and its changes require an ADR — see `docs/evaluation-protocol.md`. This file is the short
 version OpenCode should hold in context on every task — don't restate its
 contents back in commit messages or PRs, just follow it.
 

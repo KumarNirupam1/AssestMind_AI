@@ -169,6 +169,15 @@ this is committed; changing it afterwards requires a new ADR, not an edit.
   the machine and not by reading answers
 - Commit and date the protocol
 
+**Status: FROZEN on 2026-09-28.** The protocol is
+`docs/evaluation-protocol.md`; the question set is
+`eval/labelled-questions.v1.json` (24 questions, gold evidence
+`ASSETNAME/docType` + `f-<udi>` + guardrail expectation); the metrics and run
+manifest schema are `features/evaluation/metrics.ts` and
+`features/evaluation/run-manifest.ts`; the configs are `TOOL_CONFIGS_FROZEN`
+in `features/evaluation/question-set.ts`. Verified with `npm run
+verify:questions` and `npm run verify:citations`.
+
 **Done when:** the protocol document is committed, the citation verifier runs,
 and every RQ has a metric that is actually computable. No agent code yet.
 

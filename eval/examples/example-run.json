@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "v1",
+  "generatedAt": "2026-09-28T00:00:00.000Z",
+  "runs": [
+    {
+      "runId": "run-001",
+      "questionId": "q009",
+      "config": 5,
+      "systemPromptVersion": "v1",
+      "gitSha": "0123456789abcdef",
+      "startedAt": "2026-09-28T12:00:00.000Z",
+      "durationMs": 4210,
+      "usage": { "promptTokens": 620, "completionTokens": 91, "totalTokens": 711 },
+      "finalStepUsage": { "promptTokens": 154, "completionTokens": 91, "totalTokens": 245 },
+      "toolCalls": [
+        { "name": "checkGuardrails", "outcome": "SUCCESS", "durationMs": 310 }
+      ],
+      "evidence": [
+        { "kind": "guardrail", "mode": "PWF" },
+        { "kind": "fault", "id": "f-51" }
+      ],
+      "answer": "A power failure applies: torque 4.6 Nm at 2861 rpm combines to about 1.4 kW, which is below the 3500 W floor [guardrail:PWF], matching the stored stop record [fault:f-51]. Equivalent readings should be treated as under-powered cuts rather than overheating."
+    },
+    {
+      "runId": "run-002",
+      "questionId": "q016",
+      "config": 1,
+      "systemPromptVersion": "v1",
+      "gitSha": "0123456789abcdef",
+      "startedAt": "2026-09-28T12:01:00.000Z",
+      "durationMs": 1180,
+      "usage": { "promptTokens": 240, "completionTokens": 27, "totalTokens": 267 },
+      "finalStepUsage": { "promptTokens": 240, "completionTokens": 27, "totalTokens": 267 },
+      "toolCalls": [],
+      "evidence": [],
+      "answer": "No document in the corpus specifies a hydraulic oil for the PUMP-201 way lubrication system, so I cannot answer this from the available sources."
+    },
+    {
+      "runId": "run-003",
+      "questionId": "q001",
+      "config": 2,
+      "systemPromptVersion": "v1",
+      "gitSha": "0123456789abcdef",
+      "startedAt": "2026-09-28T12:02:00.000Z",
+      "durationMs": 3840,
+      "usage": { "promptTokens": 510, "completionTokens": 82, "totalTokens": 592 },
+      "finalStepUsage": { "promptTokens": 140, "completionTokens": 82, "totalTokens": 222 },
+      "toolCalls": [
+        { "name": "searchDocumentsVector", "outcome": "SUCCESS", "durationMs": 90 }
+      ],
+      "evidence": [
+        { "kind": "chunk", "id": "p201-d-sop-1", "ordinal": 1 }
+      ],
+      "answer": "The SOP specifies 8-12% soluble emulsion and requires a paper flow test at the tool tip to confirm delivery before service [chunk:p201-d-sop-1#1]."
+    }
+  ]
+}

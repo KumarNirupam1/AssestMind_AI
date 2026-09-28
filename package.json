@@ -13,6 +13,8 @@
     "verify:rules": "node scripts/verify-guardrail-rules.mjs",
     "verify:db": "node scripts/verify-db.mjs",
     "verify:retrieval": "node scripts/verify-retrieval.mjs",
+    "verify:questions": "node scripts/verify-question-set.mjs",
+    "verify:citations": "node scripts/verify-citations.mjs",
     "embed:backfill": "node scripts/backfill-embeddings.mjs"
   },
   "dependencies": {

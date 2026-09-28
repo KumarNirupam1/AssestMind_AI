@@ -153,21 +153,34 @@ synthetic text — the citation machinery still cites real stored chunks.
 
 ## Phase 6A — Freeze the evaluation protocol (BEFORE the agent)
 
-Nothing in Phase 4 or 5 may be tuned once this is frozen. The point is that
-the protocol predates the implementation, so the numbers cannot be fitted.
+**Frozen 2026-09-28 in `docs/evaluation-protocol.md` + `eval/labelled-questions.v1.json`
+(commit d633b01).** Nothing in Phase 4 or 5 may be tuned once this is frozen;
+changing it requires a new ADR.
 
-- [ ] Labelled question set built from the seed, with gold evidence IDs
-- [ ] The five tool-subset configs fixed (baseline / retrieval ablations /
-      structured-delta / full)
-- [ ] Metrics defined for RQ1–RQ5, including which are **not** meaningful
-      (per-mode TWF/RNF recall — see ADR 0002)
-- [ ] Groundedness and citation-accuracy scoring procedure agreed
-- [ ] N repeats per question and the variance reporting decided
-- [ ] Cost and latency measurement method (log `usage` **and**
-      `finalStep.usage` separately — v7 semantics)
-- [ ] Tool-call success/failure taxonomy fixed
-- [ ] Citation verifier implemented as a script
-- [ ] Protocol committed and dated; later changes require a new ADR
+- [x] Labelled question set built from the seed, with gold evidence IDs —
+      24 questions/`eval/labelled-questions.v1.json`, schema `v1`, gold =
+      `ASSETNAME/docType` + `f-<udi>` + guardrail expectation
+- [x] The five tool-subset configs fixed as `TOOL_CONFIGS_FROZEN` in
+      `features/evaluation/question-set.ts` (baseline / vector / hybrid /
+      structured-delta / full), read by the registry + harness
+- [x] Metrics defined for RQ1–RQ5, including which are **not** meaningful
+      (per-mode TWF/RNF precision/recall — ADR 0002; the RNF issue is
+      corpus-level, not just per-mode: no RNF FaultRecord exists at all)
+- [x] Groundedness (sentence citation coverage) and citation-accuracy
+      (validity against the turn's evidence) scoring procedure agreed +
+      implemented (`features/evaluation/metrics.ts`)
+- [x] N repeats per question and variance reporting decided — 3 repeats,
+      360 runs, temperature 0, mean ± SD per config; model gpt-4o-mini;
+      RQ5 includes a reviewer pass over 120 answers for unverified claims
+- [x] Cost and latency method — `usage` (all steps) and `finalStep.usage`
+      (final step) logged as separate series (v7 semantics), USD from the
+      frozen price table
+- [x] Tool-call success/failure taxonomy fixed — SUCCESS / NOT_FOUND /
+      INVALID_INPUT / TIMEOUT / UPSTREAM in `features/evaluation/run-manifest.ts`
+- [x] Citation verifier implemented and running — `npm run verify:citations`
+      (validates manifests, computes RQ5/RQ4 aggregates, rejects invalid runs);
+      `npm run verify:questions` validates the set
+- [x] Protocol committed and dated; later changes require a new ADR
 
 ## Phase 6B — Execute the evaluation
 
