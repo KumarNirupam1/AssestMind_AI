@@ -5,6 +5,7 @@ import {
   ActivityIcon,
   FactoryIcon,
   GaugeIcon,
+  MessageSquarePlusIcon,
   MoonIcon,
   SunIcon,
   WrenchIcon,
@@ -13,6 +14,7 @@ import Link from "next/link";
 import { useTheme } from "next-themes";
 import * as React from "react";
 
+import type { ChatSummary } from "@/features/chat/queries";
 import {
   Sidebar,
   SidebarContent,
@@ -86,7 +88,7 @@ function ThemeToggle() {
  * Application sidebar. Receives its asset list from the server so that no
  * client-side data fetching is involved in the read path.
  */
-export function AppSidebar({ assets = [] }: { assets?: NavAsset[] }) {
+export function AppSidebar({ assets = [], chats = [] }: { assets?: NavAsset[]; chats?: ChatSummary[] }) {
   const totalUnresolved = assets.reduce((n, a) => n + a.unresolvedCount, 0);
 
   return (
@@ -123,6 +125,46 @@ export function AppSidebar({ assets = [] }: { assets?: NavAsset[] }) {
                   </span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>
+            Investigate
+            <span className="ml-auto text-[10px] font-normal tabular-nums text-muted-foreground">
+              {chats.length}
+            </span>
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton tooltip="New investigation" render={<Link href="/chat" />}>
+                  <MessageSquarePlusIcon />
+                  <span className="group-data-[collapsible=icon]:hidden">
+                    New investigation
+                  </span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              {chats.length > 0 ? (
+                chats.slice(0, 20).map((chat) => (
+                  <SidebarMenuItem key={chat.id}>
+                    <SidebarMenuButton
+                      tooltip={chat.title}
+                      render={<Link href={`/chat/${chat.id}`} />}
+                    >
+                      <ActivityIcon />
+                      <span className="truncate group-data-[collapsible=icon]:hidden">
+                        {chat.title}
+                      </span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))
+              ) : (
+                <p className="px-2 py-1.5 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+                  No conversations yet.
+                </p>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -169,7 +211,7 @@ export function AppSidebar({ assets = [] }: { assets?: NavAsset[] }) {
       <SidebarFooter className="mt-auto shrink-0 border-t border-sidebar-border/60">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Investigation chat (Phase 5)" disabled>
+            <SidebarMenuButton tooltip="New investigation" render={<Link href="/chat" />}>
               <ActivityIcon />
               <span className="group-data-[collapsible=icon]:hidden">
                 Investigate

@@ -132,24 +132,49 @@ synthetic text — the citation machinery still cites real stored chunks.
 
 ## Phase 4 — Agent + tools
 
-- [ ] Tool registry with Zod-validated inputs
-- [ ] Sensor-history query tool
-- [ ] Maintenance-record lookup tool
-- [ ] Retrieval tool using the existing GIN index
-- [ ] Guardrail tool backed by Phase 2 (HDF/PWF/OSF only)
-- [ ] Agent prompt constrained to cite evidence
-- [ ] Tool-call traces persisted for evaluation
-- [ ] Step ceiling via `stopWhen: isStepCount(n)`; per-turn token budget,
-      per-tool timeout with one retry, per-user daily quota
-- [ ] Phase 6A protocol confirmed frozen before this phase is tuned
+- [x] Tool registry with Zod-validated inputs — `lib/agent/registry.ts`
+      (single `buildToolRegistry`, FROZEN-name gated) + per-tool
+      `zodSchema` inputs in `lib/agent/tools/`
+- [x] Sensor-history query tool — `getReadingByUdi` / `getReadingAtOrBefore`
+      in `lib/agent/tool-db.ts`, surfaced through `checkGuardrails`
+- [x] Maintenance-record lookup tool — `getMaintenanceHistory`
+- [x] Retrieval tool using the existing GIN index — `searchDocumentsVector`
+      (vector) + `searchDocumentsKeyword` (tsvector)
+- [x] Guardrail tool backed by Phase 2 (HDF/PWF/OSF only) — `checkGuardrails`
+- [x] Agent prompt constrained to cite evidence — `lib/agent/prompts.ts`
+      (`SYSTEM_PROMPT_VERSION` v1, `[chunk/fault/guardrail]` format, scoped
+      abstention, TWF/RNF honesty, injection guard)
+- [x] Tool-call traces persisted for evaluation — `ToolCallEntry` +
+      `EvidenceEntry` (FROZEN taxonomy) in `ChatMessage.evidence` via
+      `lib/agent/chat-store.ts`
+- [x] Step ceiling via `stopWhen: isStepCount(n)`; per-turn token budget,
+      per-tool timeout with one retry, per-user daily quota —
+      `lib/agent/limits.ts` + `quota.ts`, wired in `app/api/chat/route.ts`
+- [x] Phase 6A protocol confirmed frozen before this phase is tuned
 
 ## Phase 5 — Investigation chat UI
 
-- [ ] Streaming chat route
-- [ ] Tool-call rendering
-- [ ] Citation display
-- [ ] Guardrail verdict surfaced in the transcript
-- [ ] History view reusing the sidebar patterns from Phase 1
+- [x] Streaming chat route — `app/api/chat/route.ts` (Phase 4) consumed by
+      the client's `DefaultChatTransport`, which posts a single last message +
+      eval config: `{ chatId, message, config }`
+- [x] Tool-call rendering — streaming `tool-…` UIPart cards in
+      `features/chat/components/chat-messages.tsx` (running / complete /
+      failed with error text)
+- [x] Citation display — `[chunk/x/y/guardrail]` tokens rendered as chips via
+      `features/chat/citations.ts` (pure, unit-tested)
+- [x] Guardrail verdict surfaced in the transcript — `[guardrail:<mode>]`
+      chips in answers + the persisted evidence ledger (`ChatMessage.evidence`)
+      rendered as per-message Trace (evidence) panels by message id
+- [x] History view reusing the sidebar patterns from Phase 1 — Conversations
+      group in `features/assets/components/app-sidebar.tsx` fed server-side
+      by `listChats` in `features/chat/queries.ts`; `/chat` reserves a new
+      empty chat and `/chat/[id]` rebuilds the transcript from `ChatMessage`
+      rows (+ evidence ledger, validated on read)
+
+  Client: `features/chat/components/{chat-conversation,chat-messages,composer,
+  config-selector}.tsx`; tests: `features/chat/__tests__/{config,citations,
+  chat-store}.test.ts`. Verified: `tsc`, `eslint` (0/0), `vitest` (183),
+  `next build` — all green.
 
 ## Phase 6A — Freeze the evaluation protocol (BEFORE the agent)
 

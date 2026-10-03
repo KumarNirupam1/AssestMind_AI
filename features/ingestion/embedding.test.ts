@@ -116,7 +116,7 @@ describe("provider resolution", () => {
   });
 
   it("fails with PROVIDER_UNAVAILABLE rather than crashing when no key is set", async () => {
-    const provider = resolveEmbeddingProvider("openai");
+    resolveEmbeddingProvider("openai");
     const key = process.env.OPENAI_API_KEY;
     delete process.env.OPENAI_API_KEY;
     try {

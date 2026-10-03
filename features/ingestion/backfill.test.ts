@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { type ChunkRow, backfillEmbeddings, describeBackfill, planBackfill } from "@/features/ingestion/backfill";
-import { EMBED_DIM, createDeterministicEmbeddingProvider, normalizeVector } from "@/features/ingestion/embedding";
+import { EMBED_DIM, createDeterministicEmbeddingProvider } from "@/features/ingestion/embedding";
 import { parseVectorLiteral } from "@/features/ingestion/embedding";
 
 const provider = createDeterministicEmbeddingProvider();

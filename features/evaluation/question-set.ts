@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import { GuardrailModeSchema } from "../guardrails/rules.ts";
-import type { GuardrailMode } from "../guardrails/rules.ts";
 
 // The evaluation question set and the RQ1-RQ5 metrics are FROZEN at commit
 // time (docs/evaluation-protocol.md). Changing anything in this file after

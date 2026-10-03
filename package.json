@@ -18,6 +18,8 @@
     "embed:backfill": "node scripts/backfill-embeddings.mjs"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.81",
+    "@ai-sdk/react": "^4.0.126",
     "@base-ui/react": "^1.8.0",
     "@clerk/nextjs": "^7.9.7",
     "@clerk/ui": "^1.36.0",
@@ -25,6 +27,7 @@
     "@prisma/client": "^7.10.0",
     "@shadcn/react": "^0.3.1",
     "@tanstack/react-query": "^5.104.0",
+    "ai": "^7.0.122",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

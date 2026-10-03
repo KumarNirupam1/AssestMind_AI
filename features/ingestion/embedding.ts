@@ -241,7 +241,7 @@ export function createOpenAIEmbeddingProvider(
         const specifier = "openai";
         const mod = (await import(specifier)) as { default: new (o: { apiKey: string }) => OpenAILike };
         client = new mod.default({ apiKey });
-      } catch (cause) {
+      } catch {
         throw new EmbeddingError(
           "The `openai` package is not installed; run npm install openai",
           "PROVIDER_UNAVAILABLE",
