@@ -209,6 +209,13 @@ changing it requires a new ADR.
 
 ## Phase 6B — Execute the evaluation
 
+- [x] Run engine implemented — `npm run eval:run` (`scripts/run-eval.ts`)
+      executes the 24x5x3 grid through the same `buildToolRegistry` + frozen
+      prompt as the chat route, writes an `EvalRunsManifest` (schema-validated
+      on read), supports `--config` / `--only` filtering and `--resume`, logs
+      `usage` vs `finalStepUsage` as separate series, and refuses the
+      deterministic embedding provider. Pure helpers unit-tested
+      (`features/evaluation/runner.ts`).
 - [ ] Retrieval metrics (recall@k, MRR, nDCG)
 - [ ] Answer faithfulness and citation-accuracy scores
 - [ ] Guardrail precision / recall / F1 for HDF, PWF, OSF only
@@ -219,6 +226,12 @@ changing it requires a new ADR.
 
 ## Phase 7 — Deployment
 
+- [x] Durable per-user daily quota ledger — `DailyUsage` table
+      (migration `20261004120000_daily_usage`), `createPrismaUsageStore`
+      atomic upsert wired into the chat route (serverless cold starts can no
+      longer reset a user's quota)
+- [x] AWS infrastructure provisioned — RDS Postgres 16 + pgvector,
+      S3 bucket, Secrets Manager, IAM policies (see AGENTS.md inventory)
 - [ ] Vercel deployment, environment variables set
 - [ ] Inngest production keys
 - [ ] Neon is a temporary store; migrate to the teammate's RDS/Aurora
