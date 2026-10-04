@@ -7,6 +7,34 @@ FROZEN and its changes require an ADR — see `docs/evaluation-protocol.md`. Thi
 version OpenCode should hold in context on every task — don't restate its
 contents back in commit messages or PRs, just follow it.
 
+## AWS
+
+All AWS CLI commands for this project use `AWS_PROFILE=assestmind` — profile is pre-configured locally. Always pass `--profile assestmind` or set `AWS_PROFILE=assestmind` in the shell for any `aws` CLI invocation. Never use the default profile.
+
+**Account:** `919484652794` | **Region:** `ap-south-1` (Mumbai)
+
+### Provisioned resources
+
+| Resource | Name / ID | Notes |
+|---|---|---|
+| RDS PostgreSQL 16 | `assetmind-db` | Host: `assetmind-db.cdiasc4eahtl.ap-south-1.rds.amazonaws.com:5432`, DB: `assetmind`, user: `assetmind_admin`. pgvector 0.8.2 enabled. Schema migrated. |
+| Security Group | `sg-08d48536577eea802` (`assetmind-rds-sg`) | Port 5432 open; tighten to Vercel IP range before production |
+| RDS Subnet Group | `assetmind-subnet-group` | Covers all 3 AZs (1a/1b/1c) in default VPC `vpc-0b2720dbe66dbabea` |
+| S3 Bucket | `assetmind-docs-919484652794` | Raw documents. Public access blocked. Versioning enabled. |
+| IAM Policy (app) | `assetmind-app-policy` | S3 GetObject + ListBucket, Secrets Manager GetSecretValue on `assetmind/prod/*` |
+| IAM Policy (ingestion) | `assetmind-ingestion-policy` | S3 GetObject + PutObject + DeleteObject + ListBucket, same Secrets Manager scope |
+| Secrets Manager | `assetmind/prod/database-url` | Real RDS URL stored. Pull via `aws secretsmanager get-secret-value --secret-id assetmind/prod/database-url` |
+| Secrets Manager | `assetmind/prod/openai-api-key` | Placeholder — fill with real key |
+| Secrets Manager | `assetmind/prod/clerk-secret-key` | Placeholder — fill with real key |
+| Secrets Manager | `assetmind/prod/inngest-keys` | Placeholder JSON `{INNGEST_EVENT_KEY, INNGEST_SIGNING_KEY}` |
+
+### Still needed (Phase 7)
+- RDS Proxy — required before Vercel deploy (serverless exhausts `max_connections` without pooler)
+- IAM Role with `assetmind-app-policy` attached → used by Vercel OIDC
+- CloudWatch log group for structured audit logs
+- Ingestion IAM role with `assetmind-ingestion-policy` (for Inngest worker)
+- Tighten RDS SG from `0.0.0.0/0` to Vercel egress IPs
+
 ## What this is
 
 An IILM capstone project: a GenAI agent (not a fixed pipeline) that

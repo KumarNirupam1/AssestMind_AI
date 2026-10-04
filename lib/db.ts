@@ -13,11 +13,12 @@ function createPrismaClient() {
   }
 
   const pool = new Pool({
-    connectionString: url,
+    connectionString: url.replace("?sslmode=require", ""),
     max: Number(process.env.DATABASE_POOL_MAX ?? 5),
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 5_000,
     allowExitOnIdle: true,
+    ssl: { rejectUnauthorized: false }
   });
 
   const adapter = new PrismaPg(pool, {
