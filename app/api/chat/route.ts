@@ -23,7 +23,7 @@ import { getSystemPrompt, SYSTEM_PROMPT_VERSION } from "@/lib/agent/prompts";
 import { MAX_TURN_OUTPUT_TOKENS, STEP_CEILING } from "@/lib/agent/limits";
 import { createTurnCollectors } from "@/lib/agent/runtime";
 import type { ToolRuntime } from "@/lib/agent/runtime";
-import { defaultUsageStore, reserveTurnBudget } from "@/lib/agent/quota";
+import { reserveTurnBudget, createPrismaUsageStore } from "@/lib/agent/quota";
 import { createPrismaToolDb } from "@/lib/agent/tool-db";
 import { buildToolRegistry } from "@/lib/agent/registry";
 import {
@@ -52,6 +52,10 @@ import {
 
 const DEFAULT_CONFIG: ToolConfigKey = 5;
 
+// Durable per-user daily quota ledger, shared across serverless instances
+// (Phase 7). The in-memory `defaultUsageStore` stays for local dev and tests.
+const usageStore = createPrismaUsageStore(prisma);
+
 function parseConfig(value: unknown): ToolConfigKey {
   return TOOL_CONFIG_KEYS.includes(value as ToolConfigKey) ? (value as ToolConfigKey) : DEFAULT_CONFIG;
 }
@@ -78,9 +82,10 @@ export async function POST(req: Request) {
 
   const config = parseConfig(body?.config);
 
-  // Server-side daily quota, reserved before any tokens are spent. The store
-  // is the in-memory ledger until a durable one is added in Phase 7.
-  const quota = reserveTurnBudget(defaultUsageStore, `chat:${userId}`);
+  // Server-side daily quota, reserved before any tokens are spent. The ledger
+  // is a durable per-user DailyUsage row, so a serverless cold start cannot
+  // reset a user's quota.
+  const quota = await reserveTurnBudget(usageStore, `chat:${userId}`);
   if (!quota.allowed) {
     return new Response(quota.message, { status: 429, headers: { "Retry-After": "3600" } });
   }

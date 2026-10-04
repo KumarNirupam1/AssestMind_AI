@@ -208,3 +208,12 @@ model ChatMessage {
 
   @@index([chatId, createdAt])
 }
+
+model DailyUsage {
+  clerkUserId String
+  day         String // UTC day key "YYYY-MM-DD" (Phase 7 durable quota ledger)
+  tokensUsed  Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@id([clerkUserId, day])
+}
