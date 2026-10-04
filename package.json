@@ -15,6 +15,7 @@
     "verify:retrieval": "node scripts/verify-retrieval.mjs",
     "verify:questions": "node scripts/verify-question-set.mjs",
     "verify:citations": "node scripts/verify-citations.mjs",
+    "eval:run": "tsx scripts/run-eval.ts",
     "embed:backfill": "node scripts/backfill-embeddings.mjs",
     "setup:pgvector": "node scripts/setup-pgvector.mjs",
     "db:migrate": "npx prisma@7 migrate deploy"
