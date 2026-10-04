@@ -29,7 +29,7 @@ All AWS CLI commands for this project use `AWS_PROFILE=assestmind` — profile i
 | Secrets Manager | `assetmind/prod/inngest-keys` | Placeholder JSON `{INNGEST_EVENT_KEY, INNGEST_SIGNING_KEY}` |
 
 ### Still needed (Phase 7)
-- RDS Proxy — required before Vercel deploy (serverless exhausts `max_connections` without pooler)
+- **RDS Proxy is unavailable** due to AWS Free Tier restrictions. Direct connections will be used. Ensure Prisma `DATABASE_POOL_MAX` is kept small (e.g., `3`) on Vercel to prevent connection exhaustion.
 - IAM Role with `assetmind-app-policy` attached → used by Vercel OIDC
 - CloudWatch log group for structured audit logs
 - Ingestion IAM role with `assetmind-ingestion-policy` (for Inngest worker)
