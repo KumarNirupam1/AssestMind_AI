@@ -238,6 +238,20 @@ changing it requires a new ADR.
 - [ ] RDS certificate / SSL mode documented (`pg` warns about `require` vs `verify-full`)
 - [ ] Backup and re-index procedure documented
 
+## Product experience (beyond the frozen protocol)
+
+- [x] Live plant monitoring — `/monitoring` runs a deterministic simulator
+      seeded from stored readings (no DB writes), evaluates the AI4I guardrails
+      client-side on every tick, and is explicitly labelled "simulated". The
+      core engine (`features/monitoring/simulation.ts`) is pure and unit-tested.
+      It is a demo surface, never evidence: the chat agent's `checkGuardrails`
+      tool remains the only guardrail source for RQ3.
+- [x] Retrieval-mode selector — the chat dropdown names and explains the five
+      frozen tool configs ("Vector RAG", "Hybrid RAG", …). Display-only;
+      `TOOL_CONFIGS_FROZEN` and the eval protocol are unchanged.
+- [ ] Real telemetry integration (MQTT/PLC) — out of scope unless a broker is
+      provided; swap `simulation.ts` behind the same snapshot type.
+
 ## Phase 8 — Report + research paper
 
 - [ ] Method section

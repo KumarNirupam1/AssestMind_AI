@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  CONFIG_DESCRIPTIONS,
   CONFIG_LABELS,
   CONFIG_OPTIONS,
   configToolCount,
@@ -16,6 +17,12 @@ describe("chat config selector wiring", () => {
   it("labels every FROZEN config", () => {
     for (const key of TOOL_CONFIG_KEYS) {
       expect(CONFIG_LABELS[key]).toBeTruthy();
+    }
+  });
+
+  it("describes every FROZEN config for the retrieval-mode selector", () => {
+    for (const key of TOOL_CONFIG_KEYS) {
+      expect(CONFIG_DESCRIPTIONS[key].length).toBeGreaterThan(20);
     }
   });
 

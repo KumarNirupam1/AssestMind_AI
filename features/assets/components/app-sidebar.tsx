@@ -7,6 +7,7 @@ import {
   GaugeIcon,
   MessageSquarePlusIcon,
   MoonIcon,
+  RadioIcon,
   SunIcon,
   WrenchIcon,
 } from "lucide-react";
@@ -122,6 +123,17 @@ export function AppSidebar({ assets = [], chats = [] }: { assets?: NavAsset[]; c
                   <GaugeIcon />
                   <span className="group-data-[collapsible=icon]:hidden">
                     Fleet dashboard
+                  </span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  tooltip="Live monitoring"
+                  render={<Link href="/monitoring" />}
+                >
+                  <RadioIcon />
+                  <span className="group-data-[collapsible=icon]:hidden">
+                    Live monitoring
                   </span>
                 </SidebarMenuButton>
               </SidebarMenuItem>

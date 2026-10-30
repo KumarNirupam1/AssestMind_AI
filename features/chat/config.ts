@@ -10,11 +10,24 @@ import {
  * membership itself stays in `TOOL_CONFIGS_FROZEN` and is never re-declared.
  */
 export const CONFIG_LABELS: Record<ToolConfigKey, string> = {
-  1: "Baseline — no tools",
-  2: "Vector search only",
-  3: "Vector + keyword search",
-  4: "Structured data (no guardrails)",
-  5: "Full toolset (all six)",
+  1: "No retrieval (baseline)",
+  2: "Vector RAG",
+  3: "Hybrid RAG (vector + keyword)",
+  4: "Hybrid + structured data",
+  5: "Full agent (+ guardrails)",
+};
+
+/**
+ * One-line explanation of what each frozen config actually registers. Shown
+ * beside the selector so "which RAG mode am I in" is answerable without
+ * reading the source. Membership still comes from `TOOL_CONFIGS_FROZEN`.
+ */
+export const CONFIG_DESCRIPTIONS: Record<ToolConfigKey, string> = {
+  1: "No tools registered — the model answers from parametric knowledge only. This is the control baseline for the evaluation.",
+  2: "Dense embedding search over document chunks using pgvector cosine similarity.",
+  3: "Vector search plus Postgres full-text keyword search; the agent fuses both result sets.",
+  4: "Adds asset context, fault history, and maintenance history on top of hybrid retrieval. Guardrails are not available.",
+  5: "Every tool: hybrid document retrieval, structured asset history, and the deterministic AI4I guardrail rules.",
 };
 
 export const CONFIG_OPTIONS: ToolConfigKey[] = [...TOOL_CONFIG_KEYS];
