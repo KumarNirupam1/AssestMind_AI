@@ -1,19 +1,5 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 
-<<<<<<< HEAD
-const isPublicRoute = createRouteMatcher([
-  "/sign-in(.*)",
-  "/sign-up(.*)",
-  "/api/inngest(.*)",
-]);
-
-/** Clerk middleware. Protects every route except the auth screens. */
-export default clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req)) {
-    await auth.protect();
-  }
-});
-=======
 /**
  * Clerk session middleware.
  *
@@ -21,10 +7,10 @@ export default clerkMiddleware(async (auth, req) => {
  * `app/api/chat/route.ts` both call `auth.protect()` — rather than with a
  * route matcher here. That keeps a new page from silently inheriting (or
  * losing) protection based on a regex, and avoids Clerk's deprecated
- * `createRouteMatcher`. Public auth screens stay reachable by design.
+ * `createRouteMatcher`. Public auth screens and the signature-verified
+ * Inngest webhook stay reachable by design.
  */
 export default clerkMiddleware();
->>>>>>> 022f4d6 ( harden code)
 
 export const config = {
   matcher: [
