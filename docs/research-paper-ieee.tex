@@ -1,0 +1,478 @@
+\documentclass[conference]{IEEEtran}
+
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage{url}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\system}{AssetMind AI}
+\newcommand{\todo}[1]{\textcolor{red}{[REPLACE: #1]}}
+
+\title{\system: A Tool-Calling, Evidence-Traceable Agent for Industrial Asset Fault Investigation}
+
+\author{
+\IEEEauthorblockN{\todo{Student Name}}
+\IEEEauthorblockA{
+\todo{Department or Programme}\\
+IILM University\\
+\todo{City, Country}\\
+\todo{institutional email}}
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Industrial fault investigation requires engineers to combine heterogeneous
+evidence, including sensor observations, historical faults, maintenance
+records, and operating procedures. Conventional retrieval-augmented
+generation (RAG) systems frequently implement retrieval as a fixed pipeline
+and provide limited assurance that a generated claim is supported by the
+evidence used for that interaction. This paper presents \system, a
+full-stack generative-artificial-intelligence fault-investigation system in
+which a language model selects among six typed tools: semantic document
+retrieval, keyword document retrieval, asset context, fault history,
+maintenance history, and a deterministic guardrail engine. The system is
+designed as an agent rather than a fixed retrieve-then-generate pipeline.
+Every tool call and result is persisted as versioned evidence, and answers use
+machine-checkable citations verified against evidence from the same turn.
+
+The implementation combines Next.js, the Vercel AI SDK, PostgreSQL 16 with
+pgvector and PostgreSQL full-text search, Prisma, OpenAI models, Clerk
+authentication, Amazon Web Services (AWS) RDS, AWS S3, and Inngest. The
+guardrail engine implements deterministic HDF, PWF, and OSF rules of the AI4I
+2020 dataset. These rules reproduce their labelled rows exactly: 115 HDF
+rows, 95 PWF rows, and 98 OSF rows. Tool-wear failure and random failure are
+not represented as deterministic thresholds because the source data do not
+permit that inference.
+
+Implementation validation passed: 10,000 dataset rows were checked, 66
+document chunks were embedded with \texttt{text-embedding-3-small}, both
+keyword and vector retrieval returned provenance-bearing results, 202
+automated tests passed, and the production health endpoint reported a live
+database connection. A frozen evaluation protocol defines 24 labelled
+questions, five tool-subset configurations, and three repeats (360 runs).
+Full comparative agent results are intentionally not claimed until that grid
+is executed. The contribution is therefore a reproducible agent,
+guardrail, evidence, and evaluation design with verified implementation
+correctness, rather than an unsupported claim of comparative model
+superiority.
+\end{abstract}
+
+\begin{IEEEkeywords}
+industrial fault investigation, tool-calling agents, retrieval-augmented
+generation, predictive maintenance, pgvector, traceability, AI4I 2020
+\end{IEEEkeywords}
+
+\section{Introduction}
+Industrial equipment investigation is not a single retrieval problem. An
+engineer may need to identify an asset, inspect a sensor reading, compare it
+with previous failures, consult a maintenance procedure, and determine
+whether a rule-based signal is relevant. These sources differ in structure,
+units, temporal meaning, and evidential authority. A fluent answer without a
+verifiable evidence trail is consequently difficult to trust and evaluate.
+
+Large language models (LLMs) make conversational investigation interfaces
+possible, but introduce three risks. First, the model may make unsupported
+claims when a requested fact is absent. Second, retrieval may be implemented
+as a hidden fixed pipeline, making it unclear whether an answer benefited
+from semantic search, exact search, structured records, or a rule engine.
+Third, a citation displayed in an answer may not correspond to evidence
+returned during that interaction.
+
+\system addresses these risks through four design decisions:
+\begin{enumerate}
+\item The model receives a subset of a common tool registry and chooses
+which tools to call and in what order; no retrieve-then-generate sequence is
+forced.
+\item Tool calls, outcomes, and citable results are persisted in a versioned
+evidence structure attached to the chat message.
+\item Answer citations are checked against evidence produced by the same
+turn rather than trusted by visual inspection.
+\item The AI4I rules are implemented as structured, auditable verdicts
+containing observed values, thresholds, and per-clause explanations. Modes
+that cannot be inferred deterministically are not assigned invented
+thresholds.
+\end{enumerate}
+
+The study defines five research questions (RQs): RQ1 asks how document
+retrieval changes groundedness over a no-tool baseline; RQ2 asks what
+structured asset, fault, and maintenance tools add; RQ3 asks whether the
+guardrail tool is used appropriately; RQ4 asks about cost and latency; and
+RQ5 asks whether factual claims can be traced mechanically to same-turn
+evidence. The contributions are: 1) a deployable tool-calling
+fault-investigation architecture, 2) a versioned evidence and citation
+verification design, and 3) a reproducible evaluation protocol that separates
+verified implementation results from pending comparative experiments.
+
+\section{Related Work}
+\subsection{Retrieval-Augmented Generation}
+RAG combines a generator with an external non-parametric memory
+\cite{lewis2020rag}. It can reduce reliance on knowledge encoded in model
+parameters and make answers responsive to a changing document collection.
+However, retrieval alone does not establish that the model used a result,
+that the result was relevant, or that each factual sentence is supported.
+\system therefore evaluates both retrieval availability and the evidence
+trace emitted by the agent.
+
+\subsection{Reasoning and Acting with Tools}
+ReAct demonstrated the value of interleaving reasoning and actions through
+tools \cite{yao2023react}. \system adopts the tool-use principle without
+introducing a separate agent framework. The Vercel AI SDK executes the
+multi-step loop, while a typed registry determines which tools are
+available. This permits ablation without duplicating implementation paths.
+
+\subsection{Industrial Predictive Maintenance}
+The AI4I 2020 dataset provides 10,000 simulated industrial-process rows with
+temperature, speed, torque, tool-wear, product-quality, machine-failure, and
+failure-mode fields \cite{matzka2020ai4i}. It is useful because it is public,
+labelled, and reproducible. It is not a pump dataset. The pump-style asset
+identifiers in this project are a declared plant-role abstraction; the
+underlying readings and rules retain their milling-machine meaning. The
+system does not claim to model pump physics.
+
+\subsection{Traceability}
+Displaying a source label is weaker than proving that the labelled source
+was returned during the interaction. \system treats traceability as an
+observable property: a citation must resolve to an evidence item recorded
+for that turn. This catches invented identifiers, wrong chunk ordinals, and
+guardrail citations for modes not returned by the tool. Mechanical validity
+does not prove semantic entailment, so the protocol supplements it with
+sentence coverage and human review.
+
+\section{Research Questions and Experimental Design}
+The evaluation is a controlled tool-availability ablation. The model,
+temperature, system-prompt version, output limits, question set, pricing,
+and repeat count are frozen before the agent experiments:
+\begin{itemize}
+\item \textbf{RQ1:} How much does document retrieval improve groundedness
+over a no-tool baseline?
+\item \textbf{RQ2:} What value do structured asset, fault, and maintenance
+tools add beyond document retrieval?
+\item \textbf{RQ3:} Does the agent call guardrails for relevant readings and
+avoid unnecessary guardrail claims?
+\item \textbf{RQ4:} What cost and latency trade-off accompanies additional
+tool availability?
+\item \textbf{RQ5:} Can factual claims be traced to same-turn tool evidence?
+\end{itemize}
+
+The five frozen configurations are shown in Table~\ref{tab:configs}.
+
+\begin{table}[t]
+\caption{Frozen tool-subset configurations}
+\label{tab:configs}
+\centering
+\footnotesize
+\begin{tabular}{c p{0.67\columnwidth}}
+\toprule
+Config. & Registered tools\\
+\midrule
+1 & None (baseline)\\
+2 & Vector document retrieval\\
+3 & Vector and keyword document retrieval\\
+4 & Configuration 3 plus asset context, fault history, and maintenance history\\
+5 & Configuration 4 plus deterministic guardrails\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The labelled set contains 24 questions: eight retrieval, four structured,
+six guardrail, three mixed, two weak-signal, and one abstention question.
+Each question is evaluated in every configuration and repeated three times,
+for $24\times5\times3=360$ runs. The model is \texttt{gpt-4o-mini} at
+temperature zero. Runs record the system-prompt version and Git commit.
+
+\section{System Architecture}
+\subsection{Application and Data Topology}
+\system is a single Next.js application. Authenticated users access a
+dashboard, asset pages, monitoring views, and an investigation chat. Server
+Components read dashboard data directly through Prisma. The chat route is a
+streaming endpoint because it executes the LLM loop and returns incremental
+UI messages. The deployed topology is:
+\begin{center}
+\footnotesize
+\texttt{Browser $\rightarrow$ Vercel/Next.js $\rightarrow$
+OpenAI + AWS RDS + S3/Inngest}
+\end{center}
+
+PostgreSQL 16 stores structured assets, components, sensor readings, fault
+records, maintenance logs, documents, chunks, chats, messages, and daily
+usage. pgvector stores 1536-dimensional embeddings; a generated
+\texttt{tsvector} column and GIN index support keyword search. The deployed
+database contains eight assets, 64 components, 10,000 readings, 330
+attributable fault records, 104 maintenance logs, 32 documents, and 66
+chunks.
+
+\subsection{Tool Registry}
+The six tools are:
+\begin{itemize}
+\item \texttt{searchDocumentsVector}: semantic document search;
+\item \texttt{searchDocumentsKeyword}: exact PostgreSQL full-text search;
+\item \texttt{getAssetContext}: identity, components, and current state;
+\item \texttt{getFaultHistory}: historical faults and outcomes;
+\item \texttt{getMaintenanceHistory}: maintenance and inspection records;
+\item \texttt{checkGuardrails}: deterministic HDF, PWF, and OSF verdicts.
+\end{itemize}
+
+\texttt{buildToolRegistry(names)} is the only registry-construction entry
+point used by the user interface, chat route, and evaluation harness. The
+five configurations are subsets of this registry, not five pipelines. Tool
+inputs use Zod schemas, and tool failures return typed outcomes rather than
+terminating the stream. Step, token, timeout, retry, quota, result-cap, and
+evidence-budget limits bound the runtime.
+
+\subsection{Prompt, Evidence, and Citations}
+The system prompt is versioned as \texttt{v1} and held constant across
+configurations. It requires every factual claim to be supported by same-turn
+tool evidence, instructs the model to abstain when evidence is unavailable,
+and treats document content as untrusted data rather than instructions.
+Citations use the following machine-checkable forms:
+\begin{itemize}
+\item \texttt{[chunk:<id>\#<ordinal>]} for document chunks;
+\item \texttt{[fault:<id>]} for fault records;
+\item \texttt{[guardrail:<mode>]} for an observed HDF, PWF, or OSF verdict.
+\end{itemize}
+
+Evidence is persisted in \texttt{ChatMessage.evidence} with a version field.
+The verifier extracts citations, resolves each identifier against same-turn
+evidence, and reports valid and invalid citations. This provides a mechanical
+traceability check while acknowledging that semantic entailment still
+requires review.
+
+\section{Deterministic Guardrail Engine}
+The guardrail engine is a rules component, not a trained classifier. For a
+sample with air temperature $T_a$, process temperature $T_p$, speed $s$,
+torque $\tau$, tool wear $w$, and quality type $q$, the implemented rules
+are:
+\begin{align}
+\mathrm{HDF} &\iff |T_p-T_a|<8.6\ \land\ s<1380,\\
+P &= \tau\frac{2\pi s}{60},\\
+\mathrm{PWF} &\iff P<3500\ \lor\ P>9000,\\
+\mathrm{OSF} &\iff w\tau>L_q,
+\end{align}
+where $L_L=11000$, $L_M=12000$, and $L_H=13000$.
+Temperatures are stored in Kelvin, torque in Nm, speed in rpm, and tool wear
+in minutes.
+
+The formulas were verified row-by-row against the source CSV before being
+used by the engine. As shown in Table~\ref{tab:rules}, all three
+deterministic modes have exact row-set agreement.
+
+\begin{table}[t]
+\caption{Guardrail verification against AI4I labels}
+\label{tab:rules}
+\centering
+\footnotesize
+\begin{tabular}{lrrl}
+\toprule
+Mode & Label rows & Computed rows & Agreement\\
+\midrule
+HDF & 115 & 115 & Exact\\
+PWF & 95 & 95 & Exact\\
+OSF & 98 & 98 & Exact\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+TWF and RNF are not deterministic functions of the stored process variables.
+For TWF, 790 rows fall in the 200--240 minute wear band while only 46 are
+labelled TWF, and three TWF rows lie outside the band. RNF is a per-row random
+event; the released CSV contains 19 such labels. The system therefore reports
+these modes as irreducibly random instead of assigning scientifically
+unsupported thresholds.
+
+\section{Materials and Methods}
+\subsection{Dataset and Corpus}
+AI4I 2020 is used as the sensor and ground-truth source
+\cite{matzka2020ai4i}. The seeded application maps rows to eight named assets
+using a fixed seed. Synthetic manuals, SOPs, fault narratives, and
+inspection reports provide a reproducible 32-document, 66-chunk corpus.
+The documents are explicitly synthetic and the asset naming abstraction is
+explicitly acknowledged as a limitation.
+
+\subsection{Embedding and Retrieval}
+Chunks are embedded with \texttt{text-embedding-3-small} at 1536 dimensions.
+Vectors are normalized and searched with pgvector cosine distance. Keyword
+retrieval searches the generated \texttt{tsvector} column using a GIN index.
+The evaluation uses exact vector scans because the corpus is small; this
+avoids approximate-nearest-neighbour parameters becoming an uncontrolled
+variable. Both retrieval paths return source identifiers and ordinals.
+
+\subsection{Evaluation Metrics}
+For RQ1, groundedness is sentence citation coverage: the fraction of answer
+sentences containing a citation resolving to same-turn evidence. RQ2
+compares chunk, fault, and guardrail evidence composition and tool-call mix.
+RQ3 measures relevant guardrail calls, deterministic mode agreement, and
+irrelevant over-calling; TWF and RNF are excluded from threshold
+precision/recall. RQ4 records all-step usage, final-step usage, calculated
+cost, and wall-clock duration. RQ5 reports citation validity, sentence
+coverage, and human review of uncited factual claims.
+
+For citations:
+\begin{equation}
+\mathrm{validity} =
+\frac{\mathrm{valid\ citations}}
+{\mathrm{valid\ citations}+\mathrm{invalid\ citations}}.
+\end{equation}
+The no-citation case is not treated as an invalid citation; it is measured by
+sentence coverage.
+
+\subsection{Reproducibility}
+The protocol and question set are version-controlled and frozen. The
+repository provides database, guardrail, retrieval, citation, and evaluation
+scripts. Continuous integration runs linting, typechecking, the guardrail
+dataset check, unit tests, and a production build. Production uses Vercel,
+AWS RDS, AWS S3, OpenAI, Clerk, and Inngest. The deployed RDS instance has
+one-day backups and CloudWatch alarms for CPU, storage, and connections.
+
+\section{Results}
+\subsection{Implementation Validation}
+Table~\ref{tab:validation} summarizes results directly verified by tests,
+read-only database checks, or deployment checks.
+
+\begin{table}[t]
+\caption{Verified implementation results}
+\label{tab:validation}
+\centering
+\footnotesize
+\begin{tabular}{p{0.62\columnwidth}r}
+\toprule
+Validation & Result\\
+\midrule
+Automated test files & 20 passed\\
+Automated tests & 202 passed\\
+Dataset rows checked & 10,000\\
+Embedded chunks & 66/66\\
+Keyword results & 5 with provenance\\
+Vector results & 5 with provenance\\
+Question-set questions & 24 valid\\
+Production health & HTTP 200; database up\\
+CI for commit \texttt{c2b9743} & Passed\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The live retrieval check returned five keyword and five vector results. Vector
+distances were finite, within the cosine-distance range, and sorted in
+ascending order. A nonzero nearest-neighbour distance is expected for a
+free-text query that does not exactly equal a stored chunk.
+
+\subsection{Scope of the Current Results}
+The frozen protocol and sample manifests exist, but the complete 360-run
+agent grid and planned human review are not included in the verified results
+reported here. Accordingly, this paper does not claim a population-level
+groundedness gain, structured-tool improvement, guardrail-use rate,
+cost/latency curve, or complete unsupported-claim rate. Those findings must
+be added only after the full grid is executed and its manifests and human
+adjudication are preserved.
+
+\section{Discussion}
+The architecture is appropriate for investigation because questions require
+different evidence paths. A procedure question may require document search,
+a historical question may require relational tools, a concrete reading may
+require guardrails, and an absent fact should produce abstention. A common
+registry makes these alternatives measurable without code duplication.
+
+The guardrail analysis also demonstrates why labelled fields must not
+automatically be treated as predictable targets. HDF, PWF, and OSF are
+reproducible under verified compound rules; TWF and RNF are not. Treating all
+five modes as thresholds would create a seemingly complete but scientifically
+incorrect system.
+
+\section{Limitations and Threats to Validity}
+\textbf{Construct validity:} sentence citation coverage is a proxy for
+groundedness. A cited sentence can still overstate its source, while a
+correct sentence can be uncited; human review is required.
+
+\textbf{Internal validity:} tool availability changes the context supplied to
+the model. Configuration 5 may provide more evidence and tokens than
+configuration 1, so a gain cannot be attributed solely to one retrieval
+method. The protocol declares this context-budget confound.
+
+\textbf{External validity:} the sensor data come from one simulated
+milling-machine dataset, the documents are synthetic, and pump-style names
+are an abstraction. The results must not be generalized to real pump physics
+or safety-critical deployment.
+
+\textbf{Conclusion validity:} three repeats and a 24-question set are
+appropriate for a capstone prototype but limit statistical power. Temperature
+zero does not remove provider-side or infrastructure variance.
+
+\textbf{Operational security:} the current RDS security group permits public
+PostgreSQL access on port 5432. A production deployment should use private
+networking, a verified fixed-egress solution, or a narrowly scoped allowlist.
+The limitation is documented rather than hidden.
+
+\section{Ethical and Safety Considerations}
+\system is a decision-support system, not an autonomous controller. It does
+not issue machine commands or replace an engineer's inspection. It abstains
+when evidence is unavailable and distinguishes deterministic guardrails from
+irreducible random modes. Clerk scopes chat records by user, runtime limits
+bound tool and token use, and document text is treated as untrusted data to
+reduce prompt-injection risk. Dataset provenance and license conditions must
+be retained in the final submission.
+
+\section{Conclusion}
+\system demonstrates a reproducible architecture for evidence-traceable
+industrial fault investigation. Its central design is a tool-calling agent
+whose available actions can be ablated without creating separate pipelines.
+Structured records, two retrieval paths, and deterministic guardrails are
+exposed through one registry. Evidence is captured during execution and
+citations are verified against the same-turn trace.
+
+The implementation is validated at software and data levels: the
+deterministic guardrails reproduce HDF, PWF, and OSF labels exactly;
+database, pgvector, full-text search, and embeddings are operational;
+automated tests and CI pass; and the deployed health endpoint reaches the
+live database. Comparative agent performance is intentionally left as a
+measured future result until the frozen 360-run evaluation is complete.
+
+\section*{Acknowledgment}
+The authors thank \todo{supervisor or laboratory, if applicable} for
+guidance and review.
+
+\begin{thebibliography}{00}
+\bibitem{matzka2020ai4i}
+S.~Matzka, ``Explainable artificial intelligence for predictive maintenance
+applications,'' in \emph{Proc. 3rd Int. Conf. Artificial Intelligence for
+Industries (AI4I)}, 2020, pp.~1--8, doi:
+\href{https://doi.org/10.1109/AI4I49448.2020.00023}{10.1109/AI4I49448.2020.00023}.
+
+\bibitem{lewis2020rag}
+P.~Lewis, E.~Perez, A.~Piktus, F.~Petroni, V.~Karpukhin, N.~Goyal,
+H.~Küttler, M.~Lewis, W.-t.~Yih, T.~Rocktäschel, S.~Riedel, and
+S.~Kiela, ``Retrieval-augmented generation for knowledge-intensive NLP
+tasks,'' in \emph{Advances in Neural Information Processing Systems},
+vol.~33, 2020, pp.~9459--9474.
+
+\bibitem{yao2023react}
+S.~Yao, J.~Zhao, D.~Yu, N.~Du, I.~Shafran, K.~Narasimhan, and Y.~Cao,
+``ReAct: Synergizing reasoning and acting in language models,'' in
+\emph{Proc. Int. Conf. Learning Representations}, 2023.
+
+\bibitem{johnson2019faiss}
+J.~Johnson, M.~Douze, and H.~Jégou, ``Billion-scale similarity search with
+GPUs,'' \emph{IEEE Trans. Big Data}, vol.~7, no.~3, pp.~535--547, 2021,
+doi: 10.1109/TBDATA.2019.2921572.
+
+\bibitem{postgresqlfts}
+PostgreSQL Global Development Group, ``Full text search,'' PostgreSQL
+Documentation, 2026. [Online]. Available:
+\url{https://www.postgresql.org/docs/current/textsearch.html}
+
+\bibitem{pgvector}
+P.~Garrison and A.~Ramirez, ``pgvector: Open-source vector similarity search
+for Postgres,'' 2026. [Online]. Available:
+\url{https://github.com/pgvector/pgvector}
+
+\bibitem{assetmind}
+\system, ``Source repository and frozen evaluation artifacts,'' 2026.
+[Online]. Available:
+\url{https://github.com/KumarNirupam1/AssestMind_AI}
+\end{thebibliography}
+
+\end{document}
