@@ -88,7 +88,7 @@ function ToolCards({ message }: { message: UIMessage }) {
         const phase = toolPartPhase(part);
         return (
           <div
-            key={`${part.type}-${index}`}
+            key={`${part.type}-${(part as { toolCallId?: string }).toolCallId ?? index}`}
             data-slot="tool-card"
             className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-1.5"
           >
@@ -124,15 +124,23 @@ function EvidencePanel({ evidence }: { evidence: EvidenceEntry[] | undefined }) 
         Trace — {evidence.length} evidence {evidence.length === 1 ? "entry" : "entries"}
       </summary>
       <ul className="space-y-1 border-t border-border px-3 py-2 font-mono">
-        {evidence.map((entry, index) => (
-          <li key={index} className="text-muted-foreground">
-            {entry.kind === "chunk"
-              ? `chunk ${entry.id}#${entry.ordinal}`
+        {evidence.map((entry) => {
+          const key =
+            entry.kind === "chunk"
+              ? `chunk:${entry.id}#${entry.ordinal}`
               : entry.kind === "fault"
-                ? `fault ${entry.id}`
-                : `guardrail ${entry.mode}`}
-          </li>
-        ))}
+                ? `fault:${entry.id}`
+                : `guardrail:${entry.mode}`;
+          return (
+            <li key={key} className="text-muted-foreground">
+              {entry.kind === "chunk"
+                ? `chunk ${entry.id}#${entry.ordinal}`
+                : entry.kind === "fault"
+                  ? `fault ${entry.id}`
+                  : `guardrail ${entry.mode}`}
+            </li>
+          );
+        })}
       </ul>
     </details>
   );
@@ -193,7 +201,14 @@ export function ChatMessages({
   }, [messages, status]);
 
   return (
-    <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-6">
+    <div
+      ref={scrollRef}
+      role="log"
+      aria-live="polite"
+      aria-relevant="additions text"
+      aria-label="Conversation"
+      className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-6"
+    >
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4">
         {messages.map((message) =>
           message.role === "user" ? (

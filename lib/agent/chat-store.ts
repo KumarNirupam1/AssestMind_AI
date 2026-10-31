@@ -59,8 +59,13 @@ export async function saveUserMessage(
   chatId: string,
   message: UIMessage,
 ): Promise<{ alreadyStored: boolean }> {
-  const existing = await prisma.chatMessage.findUnique({ where: { id: message.id } });
-  if (existing) return { alreadyStored: true };
+  // Message ids are client-supplied, so the id alone is not proof of a retry.
+  // A row in a different chat is treated as foreign and never re-written.
+  const existing = await prisma.chatMessage.findUnique({
+    where: { id: message.id },
+    select: { chatId: true },
+  });
+  if (existing) return { alreadyStored: existing.chatId === chatId };
 
   const content = messageText(message);
 
@@ -88,16 +93,37 @@ export async function saveUserMessage(
   return { alreadyStored: false };
 }
 
-/** Persist the assistant's final parts and the turn's evidence ledger. */
+/**
+ * Persist the assistant's final parts and the turn's evidence ledger.
+ *
+ * `finalMessages` is the whole streamed conversation, not just this turn, so
+ * only rows that are new or whose content changed are written. A message id
+ * owned by another chat is skipped rather than overwritten.
+ */
 export async function saveAssistantTurn(
   prisma: PrismaClient,
   chatId: string,
   finalMessages: UIMessage[],
   evidence: EvidenceEntry[],
 ): Promise<void> {
-  for (const message of finalMessages) {
-    if (message.role !== "assistant") continue;
+  const assistantMessages = finalMessages.filter((message) => message.role === "assistant");
+  if (assistantMessages.length === 0) return;
+
+  const existingRows = await prisma.chatMessage.findMany({
+    where: { id: { in: assistantMessages.map((message) => message.id) } },
+    select: { id: true, chatId: true, content: true },
+  });
+  const existingById = new Map(existingRows.map((row) => [row.id, row]));
+  const evidenceValue =
+    evidence.length > 0 ? (evidence as unknown as Prisma.InputJsonValue) : Prisma.DbNull;
+
+  for (const message of assistantMessages) {
     const content = messageText(message);
+    const existing = existingById.get(message.id);
+
+    if (existing && existing.chatId !== chatId) continue;
+    if (existing && existing.content === content) continue;
+
     await prisma.chatMessage.upsert({
       where: { id: message.id },
       create: {
@@ -105,10 +131,10 @@ export async function saveAssistantTurn(
         chatId,
         role: "ASSISTANT",
         content,
-        evidence: evidence.length > 0 ? (evidence as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
+        evidence: evidenceValue,
         evidenceVersion: 1,
       },
-      update: { content },
+      update: { content, evidence: evidenceValue },
     });
   }
 }

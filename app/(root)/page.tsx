@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   ActivityIcon,
   AlertTriangleIcon,
@@ -103,12 +104,12 @@ export default async function DashboardPage({
               <>
                 <Separator />
                 <CardContent className="flex justify-end pt-4">
-                  <a
+                  <Link
                     href={`/?cursor=${encodeURIComponent(page.nextCursor)}`}
                     className="text-sm font-medium underline-offset-4 hover:underline"
                   >
                     Next page →
-                  </a>
+                  </Link>
                 </CardContent>
               </>
             ) : null}

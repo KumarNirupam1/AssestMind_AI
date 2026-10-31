@@ -43,3 +43,10 @@ next-env.d.ts
 
 /lib/generated/prisma
 .clerk/
+
+# local agent/tooling state
+.claude/
+.windsurf/
+
+# evaluation run output (never commit generated runs)
+/eval/runs/

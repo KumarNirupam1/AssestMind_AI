@@ -26,6 +26,10 @@ export type ChatSummary = {
 export async function listChats(clerkUserId: string): Promise<ChatSummary[]> {
   const chats = await prisma.chat.findMany({
     where: { clerkUserId },
+    // Bounded: recency is derived from the latest message, so the cap is on
+    // conversation count rather than on a sortable column.
+    take: 100,
+    orderBy: { createdAt: "desc" },
     select: {
       id: true,
       title: true,

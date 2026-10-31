@@ -7,8 +7,8 @@ import {
   isStepCount,
   streamText,
   toUIMessageStream,
-  type UIMessage,
 } from "ai";
+import { after } from "next/server";
 
 import { resolveEmbeddingProvider } from "@/features/ingestion/embedding.ts";
 import {
@@ -32,6 +32,7 @@ import {
   saveUserMessage,
   toUIMessages,
 } from "@/lib/agent/chat-store";
+import { parseChatRequest } from "@/features/chat/request-schema";
 
 /**
  * POST /api/chat — the agent loop.
@@ -60,27 +61,28 @@ function parseConfig(value: unknown): ToolConfigKey {
   return TOOL_CONFIG_KEYS.includes(value as ToolConfigKey) ? (value as ToolConfigKey) : DEFAULT_CONFIG;
 }
 
+/** Vercel streaming ceiling; the agent's step limit normally finishes sooner. */
+export const maxDuration = 60;
+
 export async function POST(req: Request) {
   const { userId } = await auth.protect();
-  if (!userId) return new Response("Unauthorized", { status: 401 });
 
-  let body: { chatId?: string; message?: UIMessage; config?: number };
+  let body: unknown;
   try {
     body = await req.json();
   } catch {
     return new Response("Invalid JSON body", { status: 400 });
   }
 
-  const chatId = body?.chatId;
-  const message = body?.message;
-  if (!chatId || !message || !message.id || !Array.isArray(message.parts)) {
-    return new Response("Missing chatId or message", { status: 400 });
-  }
+  const parsed = parseChatRequest(body);
+  if (!parsed.ok) return new Response(parsed.error, { status: 400 });
+
+  const { chatId, message } = parsed.value;
 
   const chat = await prisma.chat.findFirst({ where: { id: chatId, clerkUserId: userId } });
   if (!chat) return new Response("Conversation not found", { status: 404 });
 
-  const config = parseConfig(body?.config);
+  const config = parseConfig(parsed.value.config);
 
   // Server-side daily quota, reserved before any tokens are spent. The ledger
   // is a durable per-user DailyUsage row, so a serverless cold start cannot
@@ -116,19 +118,32 @@ export async function POST(req: Request) {
     stopWhen: isStepCount(STEP_CEILING),
   });
 
-  // The response is produced by the UI-message stream below; consume the
-  // underlying stream so usage/finalStep settle for the audit log.
-  void (async () => {
-    await result.consumeStream();
-    const [usage, finalStep] = await Promise.all([result.usage, result.finalStep]);
-    console.log(
-      `[agent] chat=${chatId} config=${config} prompt=${SYSTEM_PROMPT_VERSION} ` +
-        `durationMs=${Date.now() - startedAt} toolCalls=${collectors.toolCalls.length} ` +
-        `evidence=${collectors.evidence.length} usage=${JSON.stringify(usage)} ` +
-        `finalStepUsage=${JSON.stringify(finalStep?.usage ?? null)} ` +
-        `toolCalls=${JSON.stringify(collectors.toolCalls)}`,
-    );
-  })().catch((err) => console.error("[agent] audit logging failed", err));
+  // The response is produced by the UI-message stream below. `after` keeps the
+  // function alive long enough to drain the underlying stream and emit one
+  // structured audit line (serverless would otherwise freeze it mid-drain).
+  after(async () => {
+    try {
+      await result.consumeStream();
+      const [usage, finalStep] = await Promise.all([result.usage, result.finalStep]);
+      console.info(
+        JSON.stringify({
+          event: "chat.turn",
+          chatId,
+          config,
+          promptVersion: SYSTEM_PROMPT_VERSION,
+          durationMs: Date.now() - startedAt,
+          toolCalls: collectors.toolCalls.length,
+          tools: collectors.toolCalls.map((call) => call.name),
+          outcomes: collectors.toolCalls.map((call) => call.outcome),
+          evidence: collectors.evidence.length,
+          usage,
+          finalStepUsage: finalStep?.usage ?? null,
+        }),
+      );
+    } catch (err) {
+      console.error("[agent] audit logging failed", err);
+    }
+  });
 
   return createUIMessageStreamResponse({
     stream: toUIMessageStream({

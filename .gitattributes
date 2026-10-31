@@ -1,3 +1,8 @@
+# Normalize source text to LF in the repository. Windows editors may still
+# write CRLF locally; git normalizes on add, so this cannot create spurious
+# "modified" files or CRLF blobs in history.
+* text=auto eol=lf
+
 # Raw datasets must be stored byte-for-byte.
 #
 # The AI4I CSV ships with CRLF line endings. Without `-text` git applies its
