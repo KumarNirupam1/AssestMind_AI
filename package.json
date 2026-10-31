@@ -12,11 +12,11 @@
     "test:watch": "vitest",
     "verify:rules": "node scripts/verify-guardrail-rules.mjs",
     "verify:db": "node scripts/verify-db.mjs",
-    "verify:retrieval": "node scripts/verify-retrieval.mjs",
+    "verify:retrieval": "tsx scripts/verify-retrieval.mjs",
     "verify:questions": "node scripts/verify-question-set.mjs",
     "verify:citations": "node scripts/verify-citations.mjs",
     "eval:run": "tsx scripts/run-eval.ts",
-    "embed:backfill": "node scripts/backfill-embeddings.mjs",
+    "embed:backfill": "tsx scripts/backfill-embeddings.mjs",
     "setup:pgvector": "node scripts/setup-pgvector.mjs",
     "db:migrate": "npx prisma@7 migrate deploy",
     "inngest:dev": "inngest-cli dev -u http://localhost:3000/api/inngest"

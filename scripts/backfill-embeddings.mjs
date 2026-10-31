@@ -13,7 +13,7 @@
 //   npm run embed:backfill -- --dry-run
 
 import "dotenv/config";
-import pg from "pg";
+import { createPgClient } from "./pg-client.mjs";
 
 import { backfillEmbeddings, describeBackfill } from "../features/ingestion/backfill.ts";
 import { resolveEmbeddingProvider, EMBED_DIM } from "../features/ingestion/embedding.ts";
@@ -25,7 +25,7 @@ if (!url) {
 }
 
 const dryRun = process.argv.includes("--dry-run");
-const client = new pg.Client({ connectionString: url });
+const client = createPgClient(url);
 const provider = resolveEmbeddingProvider();
 
 try {

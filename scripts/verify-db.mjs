@@ -1,5 +1,5 @@
 import "dotenv/config";
-import pg from "pg";
+import { createPgClient } from "./pg-client.mjs";
 
 const url = process.env.DATABASE_URL;
 if (!url) {
@@ -7,7 +7,7 @@ if (!url) {
   process.exit(1);
 }
 
-const client = new pg.Client({ connectionString: url });
+const client = createPgClient(url);
 const failures = [];
 
 function check(name, ok, detail) {
